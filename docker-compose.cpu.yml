@@ -1,8 +1,8 @@
 # ==============================================================================
 # Docker Compose Override - Perfil de Ejecución 100% CPU
-# Sistema Voice AI - Centro de Salud Mental y Terapia Especializada
-# Propósito: Permite levantar todo el stack de IA en entornos sin GPU NVIDIA
-# Uso: docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+# Voice AI Engine - Private & Autonomous Clinical Speech & Medical NLP Subsystem
+# Propósito: Permite levantar todo el stack de IA en entornos sin GPU NVIDIA (macOS, Linux o Windows)
+# Uso: docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build
 # ==============================================================================
 
 services:

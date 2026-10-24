@@ -22,7 +22,10 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --retries 10 --timeout 30 -r requirements.txt
+RUN pip install --no-cache-dir --retries 5 --timeout 30 \
+    --index-url https://pypi.org/simple \
+    --extra-index-url https://mirrors.aliyun.com/pypi/simple/ \
+    -r requirements.txt
 
 # ------------------------------------------------------------------------------
 # Stage 2: Runtime Image (Hardened & Rootless)

@@ -1,7 +1,7 @@
 # Voice_AI_Engine
 
 **Subsistema Local On-Premise de Inteligencia Artificial para Salud Mental y Adicciones**  
-*Centro de Salud Mental y Terapia Especializada*  
+*Private & Autonomous Clinical Speech & Medical NLP Subsystem*  
 
 [![Docker](https://img.shields.io/badge/Docker-Compose_v2-2496ED?logo=docker&logoColor=white)](#)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](#)
@@ -52,10 +52,10 @@ El sistema opera mediante seis microservicios aislados en la red privada interna
                  │                   └─────────────────────┘
         ┌────────┴────────┐
         ▼                 ▼
- ┌───────────────┐ ┌───────────────┐        ┌─────────────────────┐
- │  cat-whisper  │ │  cat-ollama   │        │    voice-portainer    │
- │ (Puerto 8000) │ │(Puerto 11434) │        │ (HTTPS Puerto 9443) │
- └───────────────┘ └───────────────┘        └─────────────────────┘
+ ┌───────────────────────┐ ┌───────────────────────┐        ┌─────────────────────┐
+ │ voice-whisper-service │ │ voice-ollama-service  │        │    voice-portainer    │
+ │     (Puerto 8000)     │ │    (Puerto 11434)     │        │ (HTTPS Puerto 9443) │
+ └───────────────────────┘ └───────────────────────┘        └─────────────────────┘
 ```
 
 ---
@@ -81,7 +81,7 @@ El sistema opera mediante seis microservicios aislados en la red privada interna
 - **Configuración:** `WHISPER_DEVICE=cuda`, `WHISPER_COMPUTE_TYPE=float16`, `OLLAMA_NUM_GPU=99`.
 - **Comando de inicio:**
   ```bash
-  docker compose up -d
+  docker compose up -d --build
   ```
 
 ### Perfil Universal por CPU (Sin GPU NVIDIA)
@@ -90,7 +90,7 @@ El sistema opera mediante seis microservicios aislados en la red privada interna
 - **Configuración:** Inferencia con cuantización `int8` en Whisper y ejecución completa en RAM para Ollama (`OLLAMA_NUM_GPU=0`).
 - **Comando de inicio:**
   ```bash
-  docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+  docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build
   ```
 
 ---
@@ -103,21 +103,31 @@ git clone https://github.com/jaraneda666/Voice_AI_Engine.git
 cd Voice_AI_Engine
 ```
 
-### 2. Configurar Variables de Entorno
-Copie la plantilla base:
+### 2. Inicio Automático con Detección de Hardware (Recomendado)
+
+El repositorio incluye scripts multiplataforma que detectan automáticamente si cuenta con GPU NVIDIA o CPU pura, generan certificados TLS si faltan e inicializan los microservicios:
+
+- **Linux / macOS:**
+  ```bash
+  chmod +x start.sh
+  ./start.sh
+  ```
+- **Windows (PowerShell):**
+  ```powershell
+  .\start.ps1
+  ```
+
+### 3. Opcional: Inicio Manual con Docker Compose
+
+Si prefiere iniciar manualmente:
 ```bash
 cp .env.example .env
-```
-Ajuste los valores de hardware y memoria según las especificaciones de su servidor.
 
-### 3. Iniciar los Servicios
+# Perfil Acelerado por GPU NVIDIA (CUDA):
+docker compose up -d --build
 
-```bash
-# Modo con GPU NVIDIA:
-docker compose up -d
-
-# Modo con CPU pura:
-docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+# Perfil Universal 100% CPU (macOS, Linux o Windows sin GPU):
+docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build
 ```
 
 ### 4. Verificar Estado de Salud

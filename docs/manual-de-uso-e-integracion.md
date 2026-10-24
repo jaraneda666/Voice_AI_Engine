@@ -47,23 +47,42 @@ El motor dispone de una arquitectura dual que permite operar con aceleración po
 | **Controlador** | NVIDIA Container Toolkit y driver NVIDIA v525+ | Drivers estándar del sistema operativo |
 | **Almacenamiento** | 25 GB de espacio libre (modelos y capas base) | 25 GB de espacio libre |
 
-### 2.2. Modos de Ejecución
+### 2.2. Modos de Ejecución y Scripts de Puesta en Marcha
 
-#### A. Despliegue con Aceleración GPU (Predeterminado)
-Aprovecha la tarjeta gráfica NVIDIA para ejecutar Whisper en precisión `float16` y delegar las capas de Ollama a la memoria VRAM:
+#### A. Inicio Automatizado Multiplataforma (Recomendado)
+El repositorio incorpora scripts de detección automática de hardware que verifican el entorno, generan certificados TLS si faltan, configuran `.env` e inician los servicios con el perfil adecuado (GPU o CPU):
+
+- **En Linux o macOS:**
+  ```bash
+  chmod +x start.sh
+  ./start.sh
+  ```
+  *(En macOS detecta automáticamente la arquitectura ARM64/x86_64 y conmuta a CPU, mientras que en Linux activa CUDA si detecta una GPU NVIDIA).*
+
+- **En Windows (PowerShell):**
+  ```powershell
+  .\start.ps1
+  ```
+  *(Para forzar modo CPU en cualquier sistema: `./start.sh --cpu` o `.\start.ps1 -Cpu`).*
+
+#### B. Despliegue Manual con Aceleración GPU (NVIDIA CUDA)
+Construye las imágenes independientes desde cero y levanta todo el subsistema aprovechando la GPU NVIDIA para Whisper (`float16`) y Ollama:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-#### B. Despliegue en CPU Pura (Máxima Portabilidad)
-Diseñado para servidores convencionales, máquinas virtuales sin passthrough o equipos portátiles. Utiliza el archivo complementario `docker-compose.cpu.yml`:
+#### C. Despliegue Manual en CPU Pura (macOS, Linux o Windows)
+Diseñado para macOS (Apple Silicon o Intel), servidores cloud estándar sin GPU, o entornos de prueba. Utiliza el archivo complementario `docker-compose.cpu.yml`:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build
 ```
 
-Este comando anula los requerimientos de drivers NVIDIA, conmuta Whisper a cuantización `int8` y configura a Ollama para operar sin delegación de VRAM (`OLLAMA_NUM_GPU=0`).
+Este comando anula las reservas de hardware NVIDIA, conmuta Whisper a cuantización `int8` y configura a Ollama para operar sin delegación de VRAM (`OLLAMA_NUM_GPU=0`).
+
+> [!NOTE]
+> Todos los microservicios (`whisper-service`, `ai-gateway`, `rag-service` y `ollama-service`) cuentan con Dockerfiles multi-stage completamente desacoplados. Ningún microservicio depende de imágenes locales previas ni de carpetas de wheels externas, garantizando un despliegue limpio y portable en cualquier sistema operativo.
 
 ---
 

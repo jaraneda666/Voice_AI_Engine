@@ -7,9 +7,9 @@
 .env
 *.env.local
 
-# Certificados y llaves privadas
-nginx/certs/*.key
-nginx/certs/*.crt
+# Certificados SSL locales para entorno de desarrollo (out-of-the-box)
+!nginx/certs/server.crt
+!nginx/certs/server.key
 !nginx/certs/.gitkeep
 
 # Caches y bytecode de Python
@@ -24,10 +24,8 @@ venv/
 ENV/
 
 # Almacenamiento local del motor RAG (datos y documentos Markdown)
-rag-service/data/
-rag-service/wheels/
+rag-service/data/*
 !rag-service/data/.gitkeep
-!rag-service/wheels/.gitkeep
 
 # Archivos temporales y de depuración
 *.log

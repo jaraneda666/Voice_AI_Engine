@@ -1,6 +1,6 @@
 """
 Whisper Transcription Microservice - FastAPI + Faster-Whisper (CTranslate2)
-Sistema Voice AI - Centro de Salud Mental y Terapia Especializada
+Voice AI Engine - Private Clinical Speech & Medical NLP Subsystem
 
 CUMPLIMIENTO NORMATIVO ESTRICTO:
 - Ley N° 21.719 (Protección de Datos Personales y Datos Biométricos de Voz).

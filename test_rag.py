@@ -79,4 +79,4 @@ with urllib.request.urlopen(req_infer, context=ctx, timeout=60) as resp:
     for k, v in infer_res.get("estructura_clinica", {}).items():
         print(f"   [{k}]: {v}")
 
-print("\n✅ TODAS LAS PRUEBAS DE RAG COMPLETADAS CON ÉXITO")
+print("\n[OK] TODAS LAS PRUEBAS DE RAG COMPLETADAS CON EXITO")

@@ -520,7 +520,7 @@ HTML_DASHBOARD = """<!DOCTYPE html>
         <header>
             <div>
                 <h1>Motor RAG & Ingesta Documental</h1>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Centro de Salud Mental y Terapia Especializada</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Voice AI Engine - Private Clinical Knowledge Base</p>
             </div>
             <span class="badge">Hardware Agnostic: CPU / GPU</span>
         </header>

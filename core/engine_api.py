@@ -1,6 +1,6 @@
 """
 API REST del Motor de Inteligencia Artificial
-Proyecto: Voice_AI_Engine - Centro de Salud Mental y Terapia Especializada
+Proyecto: Voice_AI_Engine (Private Clinical Speech & Medical NLP Subsystem)
 Seguridad: OWASP Top 10 API Security | OWASP Web Application Security | Ley N° 21.719
 """
 

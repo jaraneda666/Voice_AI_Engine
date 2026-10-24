@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Ollama Service Entrypoint Script
-# Sistema Voice AI - Centro de Salud Mental y Terapia Especializada
+# Voice AI Engine - Private Clinical Speech & Medical NLP Subsystem
 # Hardened non-root automation for startup and model pulling
 # ==============================================================================
 

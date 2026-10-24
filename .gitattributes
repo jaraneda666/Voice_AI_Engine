@@ -1,0 +1,18 @@
+# ==============================================================================
+# .gitattributes - Cross-Platform Portability Rules
+# Enforce LF endings on Linux/POSIX scripts and configurations across all OS
+# ==============================================================================
+
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# Shell scripts and container entrypoints MUST have LF endings
+*.sh text eol=lf
+Dockerfile* text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.conf text eol=lf
+*.py text eol=lf
+
+# Windows PowerShell scripts
+*.ps1 text eol=crlf

@@ -1,6 +1,6 @@
 # Arquitectura del Microservicio RAG y Portabilidad de Hardware
 
-**Proyecto:** Voice_AI_Engine (Centro de Salud Mental y Terapia Especializada)  
+**Proyecto:** Voice_AI_Engine (Private Clinical Speech & Medical NLP Subsystem)  
 **Normativas de Cumplimiento:** Ley N° 21.719 (Chile) | Ley N° 20.584 | OWASP Top 10 API Security | OWASP Top 10 for LLM Applications 2025 | CIS Docker Benchmark v1.6.0  
 
 ---

@@ -1,10 +1,45 @@
 # ==============================================================================
-# AI API Gateway Microservice - Dockerfile
-# Inherits hardened base and venv from voice-whisper-service:1.0.0 (Zero network overhead)
+# AI API Gateway Microservice - Multi-stage Dockerfile
+# Hardened according to CIS Docker Benchmark v1.6.0
 # Target: Python 3.11 + FastAPI Internal Orchestrator
+# Portability: Dual index fallback for environments with DNS/CDN sinkholes
 # ==============================================================================
 
-FROM voice-whisper-service:1.0.0
+# ------------------------------------------------------------------------------
+# Stage 1: Build Dependencies
+# ------------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS builder
+
+WORKDIR /build
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --retries 5 --timeout 20 \
+    --index-url https://pypi.org/simple \
+    --extra-index-url https://mirrors.aliyun.com/pypi/simple/ \
+    -r requirements.txt
+
+# ------------------------------------------------------------------------------
+# Stage 2: Runtime Image (Hardened & Rootless)
+# ------------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS runner
+
+# Remove dangerous/unnecessary setuid/setgid binaries to prevent privilege escalation
+RUN find / -xdev -perm /6000 -type f -exec chmod a-s {} + 2>/dev/null || true
+
+# CIS Benchmark: Dedicated non-root user and group (10001:10001)
+RUN groupadd -g 10001 appgroup && \
+    useradd -u 10001 -g appgroup -s /sbin/nologin -d /app appuser
+
+# Create required application directory and assign ownership
+RUN mkdir -p /app && \
+    chown -R 10001:10001 /app && \
+    chmod 1777 /tmp
+
+# Copy virtual environment from builder stage
+COPY --from=builder --chown=10001:10001 /opt/venv /opt/venv
 
 WORKDIR /app
 
@@ -17,7 +52,8 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH="/app" \
     WHISPER_URL="http://whisper-service:8000" \
-    OLLAMA_URL="http://ollama-service:11434"
+    OLLAMA_URL="http://ollama-service:11434" \
+    RAG_URL="http://rag-service:8090"
 
 USER 10001:10001
 EXPOSE 8080

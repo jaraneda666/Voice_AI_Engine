@@ -1,6 +1,6 @@
 # ==============================================================================
 # Docker Compose - Subsistema Completo de Inteligencia Artificial On-Premise
-# Sistema Voice AI - Centro de Salud Mental y Terapia Especializada
+# Voice AI Engine - Private & Autonomous Clinical Speech & Medical NLP Subsystem
 # Seguridad:
 # - Canal Cifrado Externo: Nginx Reverse Proxy (HTTPS / TLS 1.3) con Whitelist de Hosts
 # - Aislamiento Interno Estricto: whisper-service y ollama-service sin exposición de puertos al host
@@ -222,6 +222,7 @@ services:
     build:
       context: ./rag-service
       dockerfile: Dockerfile
+      network: host
     image: voice-rag-service:1.0.0
     container_name: voice-rag-service
     restart: unless-stopped

@@ -1,0 +1,43 @@
+# ==============================================================================
+# .gitignore - Voice_AI_Engine
+# Seguridad y Privacidad: Exclusión estricta de secretos, caches y datos clínicos
+# ==============================================================================
+
+# Variables de entorno y secretos locales
+.env
+*.env.local
+
+# Certificados y llaves privadas
+nginx/certs/*.key
+nginx/certs/*.crt
+!nginx/certs/.gitkeep
+
+# Caches y bytecode de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Almacenamiento local del motor RAG (datos y documentos Markdown)
+rag-service/data/
+rag-service/wheels/
+!rag-service/data/.gitkeep
+!rag-service/wheels/.gitkeep
+
+# Archivos temporales y de depuración
+*.log
+*.tmp
+temp/
+scratch/
+test_protocolo_adicciones.txt
+protocolo_craving_clinico.txt
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,31 @@
+# ==============================================================================
+# Docker Compose Override - Perfil de Ejecución 100% CPU
+# Sistema Voice AI - Centro de Salud Mental y Terapia Especializada
+# Propósito: Permite levantar todo el stack de IA en entornos sin GPU NVIDIA
+# Uso: docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+# ==============================================================================
+
+services:
+  whisper-service:
+    environment:
+      - WHISPER_DEVICE=cpu
+      - WHISPER_COMPUTE_TYPE=int8
+      - WHISPER_CPU_FALLBACK=true
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+          devices: []
+
+  ollama-service:
+    environment:
+      - OLLAMA_NUM_GPU=0
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 2G
+          devices: []

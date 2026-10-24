@@ -233,8 +233,7 @@ Voice_AI_Engine/
 ├── ollama-service/             # Motor Ollama no-root con modelo Llama 3.1 8B
 ├── rag-service/                # Ingesta documental, shredding, Markdown y búsqueda vectorial
 │   ├── app/                    # Código de servicio FastAPI y Dashboard Web HTML/JS
-│   ├── data/                   # Volumen persistente para archivos Markdown (.md) e índices
-│   └── wheels/                 # Paquetes Python locales para soporte de build offline
+│   └── data/                   # Volumen persistente para archivos Markdown (.md) e índices
 ├── nginx/                      # Configuración de proxy inverso TLS 1.3 y certificados
 ├── docs/                       # Documentación técnica, manuales y especificaciones
 │   ├── manual-de-uso-e-integracion.md
@@ -246,6 +245,9 @@ Voice_AI_Engine/
 ├── test_rag.py                 # Script de prueba integral del motor RAG
 ├── docker-compose.yml          # Orquestación de contenedores (Perfil GPU)
 ├── docker-compose.cpu.yml      # Override de portabilidad para entornos 100% CPU
+├── start.sh                    # Lanzador inteligente para Linux y macOS (GPU/CPU auto)
+├── start.ps1                   # Lanzador inteligente para Windows PowerShell (GPU/CPU auto)
+├── .gitattributes              # Normalización estricta de saltos de línea LF
 ├── .env.example                # Plantilla de variables de entorno
 └── .gitignore                  # Exclusiones de seguridad (secretos, certs y temporales)
 ```
@@ -262,6 +264,21 @@ Voice_AI_Engine/
 
 ---
 
-## 10. Licencia y Confidencialidad
+## 10. Resolución Rápida de Problemas (Troubleshooting)
+
+| Problema / Síntoma | Causa Frecuente | Solución Inmediata |
+| :--- | :--- | :--- |
+| `pull access denied` en clon limpio | Intentar ejecutar `docker compose up -d` sin construir localmente | Usar `./start.sh` (o `.\start.ps1`) o agregar `--build`: `docker compose up -d --build` |
+| `bash\r: No such file or directory` | Scripts shell con saltos de línea CRLF de Windows | Se previene con `.gitattributes`. Si editó manualmente, convierta con `dos2unix` o Python a LF |
+| `could not select device driver ""` | Falta de GPU NVIDIA o Docker en macOS | Ejecutar con perfil CPU: `./start.sh --cpu` o `docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build` |
+| `Connection refused` en `pip install` (Errno 111) | Bloqueador DNS local (AdGuard/Pi-hole) bloqueando `files.pythonhosted.org` | Resuelto por diseño: Dockerfiles incluyen fallback a espejos duales de alta disponibilidad |
+| Error 403 Forbidden en Nginx | IP de cliente fuera de la lista blanca | Modificar bloque `allow` en `nginx/nginx.conf` y reiniciar: `docker compose restart nginx-proxy` |
+| Alertas SSL en navegador o cURL | Certificados TLS autofirmados locales | Usar `-k` en cURL o `verify=False` en scripts de prueba. En producción reemplace por Let's Encrypt |
+
+Consulte la [Guía Completa de Troubleshooting](docs/manual-de-uso-e-integracion.md#7-diagnóstico-y-resolución-de-problemas-troubleshooting) para detalles exhaustivos.
+
+---
+
+## 11. Licencia y Confidencialidad
 
 Desarrollado para centros de salud mental y terapia especializada con fines de apoyo clínico bajo estrictos acuerdos de confidencialidad médica y protección de datos sensibles.

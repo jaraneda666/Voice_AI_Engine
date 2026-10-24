@@ -374,26 +374,90 @@ Portainer CE permite monitorear el consumo de recursos, inspeccionar registros d
 
 ---
 
-## 7. Diagnóstico y Resolución de Problemas
+## 7. Diagnóstico y Resolución de Problemas (Troubleshooting)
 
-### 7.1. Error 403 Forbidden al Realizar Peticiones a Nginx
-- **Causa:** La dirección IP del cliente no pertenece a la lista blanca autorizada en `nginx/nginx.conf`.
-- **Solución:** Agregue la IP o subred de su cliente en la sección `allow` del bloque `server` en `nginx/nginx.conf` y reinicie el proxy con `docker compose restart nginx-proxy`.
+### 7.1. Error: "pull access denied" o Imágenes No Encontradas en Clon Limpio
+- **Síntoma:** Al ejecutar `docker compose up -d`, Docker intenta descargar imágenes locales (como `voice-whisper-service:1.0.0`) desde Docker Hub y falla con `pull access denied`.
+- **Causa:** Las imágenes de los microservicios se compilan localmente y no residen en registros públicos. Ejecutar `docker compose up -d` sin construir previamente omite la compilación.
+- **Solución:**
+  1. Utilice siempre la bandera `--build`:
+     ```bash
+     docker compose up -d --build
+     ```
+  2. O ejecute los scripts inteligentes de inicio incluidos:
+     - En Linux / macOS: `./start.sh`
+     - En Windows (PowerShell): `.\start.ps1`
 
-### 7.2. Falla de Detección de GPU NVIDIA al Iniciar
-- **Causa:** El host no dispone de tarjeta gráfica NVIDIA o el paquete `nvidia-container-toolkit` no está instalado.
-- **Solución:** Utilice el modo de compatibilidad CPU universal:
+### 7.2. Error: "file not found in build context: wheels/" o Dependencias Faltantes
+- **Síntoma:** La compilación del contenedor se interrumpe buscando carpetas de binarios locales.
+- **Causa:** Versiones previas dependían de una carpeta local `wheels/` ignorada por control de versiones.
+- **Solución:** Los Dockerfiles actuales de todos los microservicios son multi-stage independientes. Instalan sus librerías directamente desde PyPI sin requerir carpetas locales. Si clonó recientemente, ejecute una compilación limpia sin caché:
   ```bash
-  docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+  docker compose build --no-cache
   ```
 
-### 7.3. Certificados TLS Autofirmados
-- **Causa:** Los certificados generados en `nginx/certs/server.crt` son autofirmados para uso interno y de desarrollo.
-- **Solución:** Al realizar llamadas mediante bibliotecas HTTP (cURL, Python Requests, Axios), utilice la opción de omitir verificación SSL (`verify=False` en Python, `-k` en cURL), o instale el certificado en el almacén de entidades de confianza de su sistema operativo.
+### 7.3. Conexión Rechazada o Fallo de Red al Instalar Paquetes (Errno 111 Connection refused a files.pythonhosted.org)
+- **Síntoma:** `pip install` dentro de la etapa builder del contenedor falla repetidamente indicando `Connection refused` hacia `files.pythonhosted.org:443`.
+- **Causa:** Redes locales con bloqueadores DNS (Pi-hole, AdGuard, routers OpenWrt con listas de filtrado) o proxies corporativos que resuelven dominios CDN de PyPI a `0.0.0.0`.
+- **Solución:**
+  - Los Dockerfiles del proyecto cuentan con configuración de doble índice (`--index-url https://pypi.org/simple` y `--extra-index-url https://mirrors.aliyun.com/pypi/simple/`) que conmuta de forma automática a espejos de alta disponibilidad en caso de bloqueo.
+  - Asegúrese de que `docker-compose.yml` mantenga `network: host` en los bloques `build:` de los servicios para utilizar la interfaz de red del equipo host.
 
-### 7.4. Verificación Automatizada del Sistema
-Para validar de forma integral el correcto funcionamiento de todos los componentes, ejecute el script de prueba integrado:
+### 7.4. Error: "/usr/bin/env: 'bash\r': No such file or directory" en Linux o macOS
+- **Síntoma:** Al arrancar `voice-ollama-service` o ejecutar `./start.sh`, el proceso finaliza de inmediato con error de intérprete `bash\r`.
+- **Causa:** Los archivos fueron clonados o editados en Windows con saltos de línea CRLF (`\r\n`) en vez de LF (`\n`).
+- **Solución:**
+  - El repositorio incorpora el archivo `.gitattributes` para forzar automáticamente terminaciones LF en scripts `.sh` y Dockerfiles.
+  - Si editó manualmente un script en Windows, conviértalo a formato Unix con `dos2unix` o mediante Python:
+    ```bash
+    python -c "for p in ['start.sh', 'ollama-service/entrypoint.sh']: data = open(p,'rb').read().replace(b'\r\n', b'\n'); open(p,'wb').write(data)"
+    ```
 
+### 7.5. Falla de Detección de GPU NVIDIA al Iniciar o Error de Driver
+- **Síntoma:** Docker Compose arroja el error `could not select device driver "" with capabilities: [[gpu]]`.
+- **Causa:** El host no dispone de tarjeta gráfica NVIDIA, está en macOS (donde Docker Desktop no tiene acceso a hardware NVIDIA) o falta el paquete `nvidia-container-toolkit`.
+- **Solución:**
+  - Utilice el iniciador automático: `./start.sh` (detecta el entorno y conmuta automáticamente a CPU) o `.\start.ps1`.
+  - O fuerce manualmente el perfil CPU universal:
+    ```bash
+    docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build
+    ```
+
+### 7.6. Contenedor voice-ollama-service en Estado Unhealthy
+- **Síntoma:** El gateway no inicia porque `voice-ollama-service` no pasa su comprobación de salud.
+- **Causa:** En el primer arranque, el script `entrypoint.sh` descarga el modelo LLM (`llama3.1:8b-instruct-q4_K_M`, aproximadamente 4.7 GB). Si la conexión a internet es lenta, el periodo de gracia puede expirar antes de concluir la descarga.
+- **Solución:**
+  1. Revise los registros de descarga en tiempo real:
+     ```bash
+     docker logs -f voice-ollama-service
+     ```
+  2. Si requiere precalentar el modelo manualmente dentro del contenedor:
+     ```bash
+     docker exec -it voice-ollama-service ollama pull llama3.1:8b-instruct-q4_K_M
+     ```
+
+### 7.7. Error 403 Forbidden al Realizar Peticiones a Nginx
+- **Síntoma:** Las llamadas a `https://127.0.0.1:8443/` devuelven código HTTP 403.
+- **Causa:** La IP del cliente no coincide con la lista blanca definida en `nginx/nginx.conf`.
+- **Solución:** Agregue la IP o subred de su cliente en la sección `allow` del bloque `server` en `nginx/nginx.conf` y reinicie el proxy:
+  ```bash
+  docker compose restart nginx-proxy
+  ```
+
+### 7.8. Advertencias de Certificados TLS Autofirmados en Navegadores y APIs
+- **Síntoma:** Los navegadores o bibliotecas HTTP emiten alertas por certificado no confiable (`CERT_AUTHORITY_INVALID` o `SSL: CERTIFICATE_VERIFY_FAILED`).
+- **Causa:** Los certificados provistos en `nginx/certs/` son autofirmados para uso interno y de desarrollo local (`CN=voice-ai.local`).
+- **Solución:**
+  - En pruebas locales con cURL: use `-k` o `--insecure`.
+  - En Python: configure `verify=False` o un contexto SSL con `check_hostname = False`.
+  - En producción: reemplace `nginx/certs/server.crt` y `nginx/certs/server.key` por certificados firmados por una entidad certificadora reconocida (CA) o Let's Encrypt.
+
+### 7.9. Verificación Integral Automatizada
+Para verificar que todos los servicios y conexiones internas operen según los estándares de diseño, ejecute los scripts de validación:
 ```bash
+# Prueba integral del motor RAG, ingesta, shredding y consulta:
 python test_rag.py
+
+# Prueba de anonimización perimetral, pipeline clínico y mitigación OWASP:
+python test_engine.py
 ```

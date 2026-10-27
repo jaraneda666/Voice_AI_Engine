@@ -275,13 +275,16 @@ Voice_AI_Engine/
 ├── nginx/                      # Configuración de proxy inverso TLS 1.3 y certificados
 ├── docs/                       # Documentación técnica, manuales y especificaciones
 │   ├── manual-de-uso-e-integracion.md
+│   ├── manual-de-arquitectura-e-integracion.pdf # Manual integral unificado en PDF (14 págs.)
 │   ├── arquitectura-rag-portabilidad.md
 │   ├── arquitectura_motor.md
 │   ├── reporte-de-pruebas-y-validacion.md  # Certificación de pruebas empíricas
 │   ├── despliegue-render-cpu.md            # Guía completa de despliegue en Render (CPU)
 │   └── reporte-pericial-pentesting-y-saneacion.md # Auditoría Red Team y certificación de saneamiento
 ├── output/                     # Entregables procesados y consolidados
-│   └── manual-de-operacion-e-integracion-api.md
+│   └── manual-de-arquitectura-e-integracion.pdf # Documento PDF oficial de arquitectura e integración
+├── tools/                      # Herramientas de soporte y automatización
+│   └── build_integrated_pdf.py # Compilador automatizado de PDF con Playwright Chromium
 ├── test_engine.py              # Suite de pruebas unitarias y de integración
 ├── test_rag.py                 # Script de prueba integral del motor RAG
 ├── docker-compose.yml          # Orquestación de contenedores (Perfil GPU)

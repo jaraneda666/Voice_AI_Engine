@@ -277,7 +277,8 @@ Voice_AI_Engine/
 │   ├── arquitectura-rag-portabilidad.md
 │   ├── arquitectura_motor.md
 │   ├── reporte-de-pruebas-y-validacion.md  # Certificación de pruebas empíricas
-│   └── despliegue-render-cpu.md            # Guía completa de despliegue en Render (CPU)
+│   ├── despliegue-render-cpu.md            # Guía completa de despliegue en Render (CPU)
+│   └── reporte-pericial-pentesting-y-saneacion.md # Auditoría Red Team y certificación de saneamiento
 ├── output/                     # Entregables procesados y consolidados
 │   └── manual-de-operacion-e-integracion-api.md
 ├── test_engine.py              # Suite de pruebas unitarias y de integración

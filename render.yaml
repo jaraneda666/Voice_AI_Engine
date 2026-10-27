@@ -1,0 +1,116 @@
+# ==============================================================================
+# Render.com Infrastructure as Code (Blueprint)
+# Project: Voice AI Engine - Private Clinical Speech & Medical NLP Subsystem
+# Architecture: Standard CPU Deployment (Multi-Service Blueprint with Persistent Storage)
+# ==============================================================================
+
+version: "1"
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. AI API Gateway (Public Web Service)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: voice-ai-gateway
+    runtime: docker
+    dockerContext: ./gateway-service
+    dockerfilePath: ./gateway-service/Dockerfile
+    plan: standard
+    region: oregon
+    branch: main
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: HARDWARE_PROFILE
+        value: cpu
+      - key: WHISPER_URL
+        value: http://voice-whisper-service:8000
+      - key: OLLAMA_URL
+        value: http://voice-ollama-service:11434
+      - key: RAG_URL
+        value: http://voice-rag-service:8090
+      - key: LLM_MODEL
+        value: llama3.2:3b
+
+  # ----------------------------------------------------------------------------
+  # 2. Ollama LLM Inference Service (Private Service with Persistent Disk)
+  # ----------------------------------------------------------------------------
+  - type: pserv
+    name: voice-ollama-service
+    runtime: docker
+    dockerContext: ./ollama-service
+    dockerfilePath: ./ollama-service/Dockerfile
+    plan: standard
+    region: oregon
+    branch: main
+    disk:
+      name: ollama-models
+      mountPath: /home/ollama/.ollama
+      sizeGB: 20
+    envVars:
+      - key: MODEL_NAME
+        value: llama3.2:3b
+      - key: OLLAMA_HOST
+        value: 0.0.0.0:11434
+      - key: OLLAMA_NUM_GPU
+        value: "0"
+      - key: OLLAMA_KEEP_ALIVE
+        value: 24h
+      - key: OLLAMA_NUM_PARALLEL
+        value: "1"
+
+  # ----------------------------------------------------------------------------
+  # 3. Whisper Speech-to-Text Service (Private Service with Model Cache Disk)
+  # ----------------------------------------------------------------------------
+  - type: pserv
+    name: voice-whisper-service
+    runtime: docker
+    dockerContext: ./whisper-service
+    dockerfilePath: ./whisper-service/Dockerfile
+    plan: standard
+    region: oregon
+    branch: main
+    disk:
+      name: whisper-cache
+      mountPath: /models
+      sizeGB: 10
+    envVars:
+      - key: WHISPER_MODEL
+        value: small
+      - key: WHISPER_DEVICE
+        value: cpu
+      - key: WHISPER_COMPUTE_TYPE
+        value: int8
+      - key: WHISPER_CPU_FALLBACK
+        value: "true"
+      - key: HF_HOME
+        value: /models
+      - key: AUDIO_RAM_DIR
+        value: /tmp/audio_ram
+      - key: MAX_AUDIO_SIZE_MB
+        value: "50"
+
+  # ----------------------------------------------------------------------------
+  # 4. RAG Document Ingestion & Retrieval Service (Private Service)
+  # ----------------------------------------------------------------------------
+  - type: pserv
+    name: voice-rag-service
+    runtime: docker
+    dockerContext: ./rag-service
+    dockerfilePath: ./rag-service/Dockerfile
+    plan: standard
+    region: oregon
+    branch: main
+    disk:
+      name: rag-data
+      mountPath: /app/data
+      sizeGB: 10
+    envVars:
+      - key: RAG_DATA_DIR
+        value: /app/data
+      - key: OLLAMA_URL
+        value: http://voice-ollama-service:11434
+      - key: EMBED_MODEL
+        value: llama3.2:3b
+

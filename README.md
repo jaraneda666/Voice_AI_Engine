@@ -94,6 +94,15 @@ El sistema opera mediante seis microservicios aislados en la red privada interna
   docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build
   ```
 
+### Despliegue en la Nube / Render.com (Instancias Estándar sin GPU)
+- **Instancias Soportadas:** Render Free, Starter, Standard o Pro.
+- **Optimización de Modelos por RAM:**
+  - **Tier 1 (512 MB - 2 GB RAM):** Whisper `tiny`/`base` (int8) + `llama3.2:1b` / `qwen2.5:1.5b`.
+  - **Tier 2 (2 GB - 4 GB RAM):** Whisper `small` (int8) + `llama3.2:3b` / `qwen2.5:3b`.
+  - **Tier 3 (4 GB - 8 GB+ RAM):** Whisper `small`/`medium` (int8) + `llama3.1:8b-instruct-q4_K_M` / `qwen2.5:7b`.
+- **Despliegue IaC:** Utiliza el Blueprint [render.yaml](render.yaml) o el instalador interactivo [install_render.sh](install_render.sh).
+- **Guía Completa:** Ver [docs/despliegue-render-cpu.md](docs/despliegue-render-cpu.md).
+
 ---
 
 ## 5. Guía Rápida de Despliegue (Quickstart)
@@ -127,7 +136,25 @@ El repositorio incluye iniciadores inteligentes que inspeccionan en tiempo real 
   * `.\start.ps1 -Cpu` : Fuerza el perfil 100% CPU optimizado.
   * `.\start.ps1 -ForceGpu` : Fuerza el uso de GPU en tarjetas con VRAM reducida.
 
-### 3. Opcional: Inicio Manual con Docker Compose
+### 3. Despliegue en Render.com o Servidores Estándar CPU
+
+Para desplegar en la nube sin GPU dedicada ([Render.com](https://render.com/) o Linux CPU):
+
+- **Instalador automatizado con menú interactivo según RAM:**
+  ```bash
+  chmod +x install_render.sh
+  ./install_render.sh
+  ```
+  *Banderas disponibles:*
+  * `./install_render.sh --check-only` : Diagnóstico de requisitos (RAM, CPU, disco, Docker, Python).
+  * `./install_render.sh --tier 1|2|3` : Selección directa de modelo según plan de hardware.
+  * `./install_render.sh --dry-run` : Genera y valida la configuración sin iniciar servicios.
+  * `./install_render.sh --tier 2 --start` : Configura e inicia los contenedores directamente.
+
+- **Despliegue Infrastructure as Code (Render Blueprint):**
+  Conecte este repositorio en el Dashboard de Render y seleccione `Blueprint` para aprovisionar automáticamente el stack usando [render.yaml](render.yaml).
+
+### 4. Opcional: Inicio Manual con Docker Compose
 
 Si prefiere iniciar manualmente:
 ```bash
@@ -249,13 +276,17 @@ Voice_AI_Engine/
 │   ├── manual-de-uso-e-integracion.md
 │   ├── arquitectura-rag-portabilidad.md
 │   ├── arquitectura_motor.md
-│   └── reporte-de-pruebas-y-validacion.md  # Certificación de pruebas empíricas
+│   ├── reporte-de-pruebas-y-validacion.md  # Certificación de pruebas empíricas
+│   └── despliegue-render-cpu.md            # Guía completa de despliegue en Render (CPU)
 ├── output/                     # Entregables procesados y consolidados
 │   └── manual-de-operacion-e-integracion-api.md
 ├── test_engine.py              # Suite de pruebas unitarias y de integración
 ├── test_rag.py                 # Script de prueba integral del motor RAG
 ├── docker-compose.yml          # Orquestación de contenedores (Perfil GPU)
 ├── docker-compose.cpu.yml      # Override de portabilidad para entornos 100% CPU
+├── render.yaml                 # Blueprint IaC para Render.com (Estándar CPU)
+├── install_render.sh           # Instalador inteligente y menú para Render / Linux CPU
+├── requirements-render.txt     # Dependencias consolidadas para Render y pruebas CPU
 ├── start.sh                    # Lanzador inteligente para Linux y macOS (GPU/CPU auto)
 ├── start.ps1                   # Lanzador inteligente para Windows PowerShell (GPU/CPU auto)
 ├── .gitattributes              # Normalización estricta de saltos de línea LF

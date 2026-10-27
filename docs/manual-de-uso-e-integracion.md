@@ -42,28 +42,34 @@ El motor dispone de una arquitectura dual que permite operar con aceleración po
 | :--- | :--- | :--- |
 | **Sistema Operativo** | Linux (Ubuntu 22.04+, Debian 12+) o Windows 11 con WSL2 | Cualquier distribución Linux x86_64, macOS o Windows |
 | **Procesador** | CPU de 4 núcleos o superior | CPU de 8 núcleos con soporte AVX2 / FMA |
-| **Memoria RAM** | 16 GB mínimo (24 GB recomendados) | 16 GB mínimo asignados al entorno Docker |
-| **Tarjeta Gráfica** | NVIDIA con 8 GB VRAM o superior (RTX 3060+, RTX 4000, A100) | No requerida |
+| **Memoria RAM** | 16 GB mínimo (24 GB recomendados) | 8 GB a 16 GB asignados al entorno Docker / WSL2 |
+| **Tarjeta Gráfica** | NVIDIA con 6 GB a 8 GB VRAM o superior (RTX 3060+, RTX 4000, A100) | No requerida (o GPUs con VRAM < 6 GB como GTX 1650) |
 | **Controlador** | NVIDIA Container Toolkit y driver NVIDIA v525+ | Drivers estándar del sistema operativo |
 | **Almacenamiento** | 25 GB de espacio libre (modelos y capas base) | 25 GB de espacio libre |
 
 ### 2.2. Modos de Ejecución y Scripts de Puesta en Marcha
 
-#### A. Inicio Automatizado Multiplataforma (Recomendado)
-El repositorio incorpora scripts de detección automática de hardware que verifican el entorno, generan certificados TLS si faltan, configuran `.env` e inician los servicios con el perfil adecuado (GPU o CPU):
+#### A. Inicio Automatizado Inteligente (Recomendado)
+El repositorio incorpora iniciadores inteligentes que inspeccionan en tiempo real las especificaciones del host (RAM física, vCPUs y memoria de Docker/WSL2, tarjeta GPU y VRAM real vía `nvidia-smi`). Si la GPU dispone de menos de 6 GB de VRAM (como tarjetas de 4 GB), conmuta automáticamente a perfil CPU informando la razón para prevenir bloqueos por *CUDA Out of Memory*:
 
 - **En Linux o macOS:**
   ```bash
   chmod +x start.sh
   ./start.sh
   ```
-  *(En macOS detecta automáticamente la arquitectura ARM64/x86_64 y conmuta a CPU, mientras que en Linux activa CUDA si detecta una GPU NVIDIA).*
+  *Banderas disponibles:*
+  * `./start.sh --dry-run` : Diagnóstico de hardware y perfil recomendado sin levantar contenedores.
+  * `./start.sh --cpu` : Fuerza el modo 100% CPU optimizado.
+  * `./start.sh --force-gpu` : Fuerza GPU en hardware con VRAM inferior a 6 GB.
 
 - **En Windows (PowerShell):**
   ```powershell
   .\start.ps1
   ```
-  *(Para forzar modo CPU en cualquier sistema: `./start.sh --cpu` o `.\start.ps1 -Cpu`).*
+  *Banderas disponibles:*
+  * `.\start.ps1 -DryRun` : Diagnóstico e informe en consola sin desplegar contenedores.
+  * `.\start.ps1 -Cpu` : Fuerza la ejecución en CPU.
+  * `.\start.ps1 -ForceGpu` : Fuerza el uso de GPU en tarjetas con memoria reducida.
 
 #### B. Despliegue Manual con Aceleración GPU (NVIDIA CUDA)
 Construye las imágenes independientes desde cero y levanta todo el subsistema aprovechando la GPU NVIDIA para Whisper (`float16`) y Ollama:
@@ -396,12 +402,12 @@ Portainer CE permite monitorear el consumo de recursos, inspeccionar registros d
   docker compose build --no-cache
   ```
 
-### 7.3. Conexión Rechazada o Fallo de Red al Instalar Paquetes (Errno 111 Connection refused a files.pythonhosted.org)
-- **Síntoma:** `pip install` dentro de la etapa builder del contenedor falla repetidamente indicando `Connection refused` hacia `files.pythonhosted.org:443`.
-- **Causa:** Redes locales con bloqueadores DNS (Pi-hole, AdGuard, routers OpenWrt con listas de filtrado) o proxies corporativos que resuelven dominios CDN de PyPI a `0.0.0.0`.
+### 7.3. Error de Privilegios de Red en BuildKit ("ERROR: additional privileges requested: network.host")
+- **Síntoma:** Al compilar con Docker Desktop o Buildx, la tarea se aborta con `ERROR: additional privileges requested: Running build containers that can access host network. Pass "--allow=network.host" to grant requested privileges. failed to execute bake: exit status 1`.
+- **Causa:** El archivo `docker-compose.yml` contenía la directiva `network: host` en los bloques `build:`. BuildKit bloquea por seguridad el acceso a la interfaz de red del host durante la construcción, y `docker compose` no admite la bandera `--allow=network.host`.
 - **Solución:**
-  - Los Dockerfiles del proyecto cuentan con configuración de doble índice (`--index-url https://pypi.org/simple` y `--extra-index-url https://mirrors.aliyun.com/pypi/simple/`) que conmuta de forma automática a espejos de alta disponibilidad en caso de bloqueo.
-  - Asegúrese de que `docker-compose.yml` mantenga `network: host` en los bloques `build:` de los servicios para utilizar la interfaz de red del equipo host.
+  - Se eliminó `network: host` de las directivas `build:`.
+  - La descarga de paquetes en entornos con bloqueadores DNS o proxies se garantiza mediante la configuración de doble índice presente en los Dockerfiles (`--index-url https://pypi.org/simple` y `--extra-index-url https://mirrors.aliyun.com/pypi/simple/`).
 
 ### 7.4. Error: "/usr/bin/env: 'bash\r': No such file or directory" en Linux o macOS
 - **Síntoma:** Al arrancar `voice-ollama-service` o ejecutar `./start.sh`, el proceso finaliza de inmediato con error de intérprete `bash\r`.
@@ -452,7 +458,12 @@ Portainer CE permite monitorear el consumo de recursos, inspeccionar registros d
   - En Python: configure `verify=False` o un contexto SSL con `check_hostname = False`.
   - En producción: reemplace `nginx/certs/server.crt` y `nginx/certs/server.key` por certificados firmados por una entidad certificadora reconocida (CA) o Let's Encrypt.
 
-### 7.9. Verificación Integral Automatizada
+### 7.9. Conflicto de Nombres de Contenedor ("The container name ... is already in use")
+- **Síntoma:** Docker Compose falla indicando `Conflict. The container name "/voice-rag-service" is already in use by container...`.
+- **Causa:** Ocurre cuando se ejecuta Docker Compose desde carpetas con diferentes nombres (por ejemplo `Voice_AI_Engine` y `TalitaKum_AI_Engine`), lo que provoca que Docker Compose infiera nombres de proyecto distintos para contenedores que tienen nombres fijos (`container_name: ...`).
+- **Solución:** `docker-compose.yml` define de forma explícita la clave raíz `name: voice_ai_engine`, asegurando un espacio de nombres único y predecible independientemente del nombre del directorio de trabajo.
+
+### 7.10. Verificación Integral Automatizada y Reporte Certificado
 Para verificar que todos los servicios y conexiones internas operen según los estándares de diseño, ejecute los scripts de validación:
 ```bash
 # Prueba integral del motor RAG, ingesta, shredding y consulta:
@@ -461,3 +472,6 @@ python test_rag.py
 # Prueba de anonimización perimetral, pipeline clínico y mitigación OWASP:
 python test_engine.py
 ```
+
+Para consultar el registro completo de pruebas empíricas, diagnósticos de hardware y evidencias de ejecución, consulte el documento:
+* 📄 **[Reporte Técnico de Pruebas y Validación Operativa](reporte-de-pruebas-y-validacion.md)**

@@ -75,8 +75,8 @@ El sistema opera mediante seis microservicios aislados en la red privada interna
 
 ## 4. Requisitos y Portabilidad de Hardware
 
-### Perfil con Aceleración GPU (Predeterminado)
-- **Tarjeta Gráfica:** NVIDIA con arquitectura Pascal, Turing, Ampere, Ada Lovelace o superior (8 GB VRAM mínimo).
+### Perfil con Aceleración GPU (NVIDIA CUDA)
+- **Tarjeta Gráfica:** NVIDIA con arquitectura Pascal, Turing, Ampere, Ada Lovelace o superior (**mínimo 6 GB a 8 GB de VRAM** para ejecutar simultáneamente Whisper Large y Llama 3.1 8B).
 - **Software:** NVIDIA Container Toolkit instalado y operativo en el daemon de Docker.
 - **Configuración:** `WHISPER_DEVICE=cuda`, `WHISPER_COMPUTE_TYPE=float16`, `OLLAMA_NUM_GPU=99`.
 - **Comando de inicio:**
@@ -84,10 +84,11 @@ El sistema opera mediante seis microservicios aislados en la red privada interna
   docker compose up -d --build
   ```
 
-### Perfil Universal por CPU (Sin GPU NVIDIA)
+### Perfil Universal por CPU (Sin GPU NVIDIA o GPUs con VRAM < 6 GB)
 - **Procesador:** CPU x86_64 o ARM64 con soporte de instrucciones AVX2 (8 hilos recomendados).
-- **Memoria RAM:** 16 GB asignados al motor Docker.
-- **Configuración:** Inferencia con cuantización `int8` en Whisper y ejecución completa en RAM para Ollama (`OLLAMA_NUM_GPU=0`).
+- **Memoria RAM:** 8 GB a 16 GB asignados al motor Docker / WSL2.
+- **Ajuste Automático:** Equipos con GPU dedicada pero con VRAM inferior a 6 GB (como la GTX 1650 de 4 GB) son conmutados automáticamente a este perfil por el iniciador para prevenir caídas críticas por *CUDA Out of Memory*.
+- **Configuración:** Inferencia con cuantización `int8` en Whisper y ejecución en RAM para Ollama (`OLLAMA_NUM_GPU=0`, límite seguro calibrado a 6 GB).
 - **Comando de inicio:**
   ```bash
   docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build
@@ -103,19 +104,28 @@ git clone https://github.com/jaraneda666/Voice_AI_Engine.git
 cd Voice_AI_Engine
 ```
 
-### 2. Inicio Automático con Detección de Hardware (Recomendado)
+### 2. Inicio Automático con Detección Inteligente de Hardware (Recomendado)
 
-El repositorio incluye scripts multiplataforma que detectan automáticamente si cuenta con GPU NVIDIA o CPU pura, generan certificados TLS si faltan e inicializan los microservicios:
+El repositorio incluye iniciadores inteligentes que inspeccionan en tiempo real la arquitectura, la RAM física, los vCPUs de Docker, la presencia de GPU NVIDIA y la memoria VRAM disponible (`nvidia-smi`), seleccionando y justificando de forma automática el perfil óptimo (GPU o CPU):
 
 - **Linux / macOS:**
   ```bash
   chmod +x start.sh
   ./start.sh
   ```
+  *Banderas disponibles:*
+  * `./start.sh --dry-run` : Ejecuta diagnóstico de hardware y muestra el perfil recomendado sin iniciar contenedores.
+  * `./start.sh --cpu` : Fuerza el modo 100% CPU.
+  * `./start.sh --force-gpu` : Fuerza el uso de GPU incluso si la VRAM es inferior a 6 GB.
+
 - **Windows (PowerShell):**
   ```powershell
   .\start.ps1
   ```
+  *Banderas disponibles:*
+  * `.\start.ps1 -DryRun` : Diagnóstico e informe en consola sin desplegar contenedores.
+  * `.\start.ps1 -Cpu` : Fuerza el perfil 100% CPU optimizado.
+  * `.\start.ps1 -ForceGpu` : Fuerza el uso de GPU en tarjetas con VRAM reducida.
 
 ### 3. Opcional: Inicio Manual con Docker Compose
 
@@ -238,7 +248,8 @@ Voice_AI_Engine/
 ├── docs/                       # Documentación técnica, manuales y especificaciones
 │   ├── manual-de-uso-e-integracion.md
 │   ├── arquitectura-rag-portabilidad.md
-│   └── arquitectura_motor.md
+│   ├── arquitectura_motor.md
+│   └── reporte-de-pruebas-y-validacion.md  # Certificación de pruebas empíricas
 ├── output/                     # Entregables procesados y consolidados
 │   └── manual-de-operacion-e-integracion-api.md
 ├── test_engine.py              # Suite de pruebas unitarias y de integración
@@ -257,6 +268,7 @@ Voice_AI_Engine/
 ## 9. Monitoreo y Administración
 
 - **Consola Portainer CE:** Ingrese a `https://127.0.0.1:9443` para supervisar el uso de CPU, memoria RAM y registros de depuración de cada microservicio.
+- **Reporte Certificado de Pruebas:** Consulte [docs/reporte-de-pruebas-y-validacion.md](docs/reporte-de-pruebas-y-validacion.md) para ver la validación funcional de los 6 microservicios.
 - **Verificación de Salud de APIs:**
   ```bash
   python test_engine.py
@@ -268,10 +280,12 @@ Voice_AI_Engine/
 
 | Problema / Síntoma | Causa Frecuente | Solución Inmediata |
 | :--- | :--- | :--- |
+| `ERROR: additional privileges requested: network.host` | BuildKit bloqueando acceso a red de host en Docker Desktop | Resuelto: Se eliminó `network: host` de los bloques `build:`. Las dependencias usan espejos duales |
+| `Conflict. The container name "/voice-..." is already in use` | Contenedores creados previamente en otra ruta con diferente nombre de proyecto | Resuelto: `docker-compose.yml` fija `name: voice_ai_engine` para unificar el espacio de nombres |
 | `pull access denied` en clon limpio | Intentar ejecutar `docker compose up -d` sin construir localmente | Usar `./start.sh` (o `.\start.ps1`) o agregar `--build`: `docker compose up -d --build` |
 | `bash\r: No such file or directory` | Scripts shell con saltos de línea CRLF de Windows | Se previene con `.gitattributes`. Si editó manualmente, convierta con `dos2unix` o Python a LF |
 | `could not select device driver ""` | Falta de GPU NVIDIA o Docker en macOS | Ejecutar con perfil CPU: `./start.sh --cpu` o `docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build` |
-| `Connection refused` en `pip install` (Errno 111) | Bloqueador DNS local (AdGuard/Pi-hole) bloqueando `files.pythonhosted.org` | Resuelto por diseño: Dockerfiles incluyen fallback a espejos duales de alta disponibilidad |
+| `CUDA out of memory` en GPUs de 4 GB | Whisper Large y Llama 8B superan la VRAM de la GPU | El iniciador conmuta automáticamente a CPU. O ejecute manualmente con `-Cpu` |
 | Error 403 Forbidden en Nginx | IP de cliente fuera de la lista blanca | Modificar bloque `allow` en `nginx/nginx.conf` y reiniciar: `docker compose restart nginx-proxy` |
 | Alertas SSL en navegador o cURL | Certificados TLS autofirmados locales | Usar `-k` en cURL o `verify=False` en scripts de prueba. En producción reemplace por Let's Encrypt |
 

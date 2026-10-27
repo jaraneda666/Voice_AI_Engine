@@ -62,8 +62,8 @@ El subsistema fue concebido bajo el principio de **independencia de arquitectura
 
 | Componente | Perfil GPU (Acelerado) | Perfil CPU Puro (Universal) | Límite RAM Recomendado |
 | :--- | :--- | :--- | :--- |
-| **whisper-service** | CUDA (`float16`) | CPU (`int8`) con fallback automático | 4 GB a 8 GB |
-| **ollama-service** | `OLLAMA_NUM_GPU=99` (VRAM) | `OLLAMA_NUM_GPU=0` (RAM de sistema) | 8 GB a 12 GB |
+| **whisper-service** | CUDA (`float16`) | CPU (`int8`) con fallback automático | 4 GB |
+| **ollama-service** | `OLLAMA_NUM_GPU=99` (VRAM) | `OLLAMA_NUM_GPU=0` (RAM de sistema) | 6 GB (calibrado para evitar OOM) |
 | **ai-gateway** | CPU (FastAPI Asíncrono) | CPU (FastAPI Asíncrono) | 1 GB |
 | **rag-service** | CPU (Extracción y Coseno) | CPU (Extracción y Coseno) | 1 GB |
 | **nginx-proxy** | CPU (Nginx Alpine) | CPU (Nginx Alpine) | 512 MB |
@@ -71,10 +71,14 @@ El subsistema fue concebido bajo el principio de **independencia de arquitectura
 
 ---
 
-### 2.2. Modos de Despliegue
+### 2.2. Modos de Despliegue y Matriz de Decisión
 
-#### Modo A: Con Aceleración GPU NVIDIA (Por Defecto)
-Aplica cuando el host dispone de tarjeta NVIDIA (RTX, GTX, Tesla, Quadro) con el NVIDIA Container Toolkit instalado.
+Los iniciadores inteligentes (`start.ps1` y `start.sh`) implementan una matriz de decisión automatizada:
+* **VRAM $\ge$ 6.0 GB con soporte Docker:** Activa el **Modo A (GPU)**.
+* **VRAM $<$ 6.0 GB (e.g. GTX 1650 de 4 GB), sin GPU NVIDIA o en macOS:** Conmuta automáticamente al **Modo B (CPU)**.
+
+#### Modo A: Con Aceleración GPU NVIDIA (VRAM $\ge$ 6 GB)
+Aplica cuando el host dispone de tarjeta NVIDIA (RTX, GTX, Tesla, Quadro) con el NVIDIA Container Toolkit instalado y al menos 6 GB de VRAM disponible.
 - **Configuración en `.env`:**
   ```bash
   WHISPER_DEVICE=cuda
@@ -84,11 +88,11 @@ Aplica cuando el host dispone de tarjeta NVIDIA (RTX, GTX, Tesla, Quadro) con el
   ```
 - **Comando de inicio:**
   ```bash
-  docker compose up -d
+  docker compose up -d --build
   ```
 
-#### Modo B: Con Aceleración 100% CPU (Portabilidad Total)
-Aplica en máquinas sin GPU, entornos cloud básicos o equipos portátiles. Utiliza el archivo `docker-compose.cpu.yml`, que elimina automáticamente las solicitudes de dispositivos NVIDIA y conmuta la inferencia de Whisper a cuantización `int8` optimizada para CPU.
+#### Modo B: Con Aceleración 100% CPU (Portabilidad Universal)
+Aplica en máquinas sin GPU, entornos cloud básicos, laptops o equipos con GPUs de 4 GB. Utiliza el archivo `docker-compose.cpu.yml`, que elimina automáticamente las solicitudes de dispositivos NVIDIA y conmuta la inferencia de Whisper a cuantización `int8` optimizada para CPU y limita Ollama a 6 GB seguros.
 - **Configuración en `.env`:**
   ```bash
   WHISPER_DEVICE=cpu
@@ -98,7 +102,7 @@ Aplica en máquinas sin GPU, entornos cloud básicos o equipos portátiles. Util
   ```
 - **Comando de inicio universal:**
   ```bash
-  docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+  docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build
   ```
 
 ---
@@ -128,3 +132,5 @@ Aplica en máquinas sin GPU, entornos cloud básicos o equipos portátiles. Util
    ```bash
    python test_engine.py
    ```
+4. **Certificación de Pruebas:**
+   Consulte el documento [Reporte Técnico de Pruebas y Validación Operativa](reporte-de-pruebas-y-validacion.md) para el detalle de las evidencias de ejecución y validación de endpoints.

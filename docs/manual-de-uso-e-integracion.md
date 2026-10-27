@@ -30,6 +30,15 @@ El stack se compone de seis contenedores especializados que interactúan a trav�
 - **OWASP Top 10 for LLM Applications 2025:** Aislamiento de prompt injection mediante delimitadores de narrativa pasiva y formateo JSON forzado.
 - **CIS Docker Benchmark v1.6.0:** Contenedores ejecutados con usuario sin privilegios (`10001:10001`), sistemas de archivos en modo sólo lectura (`read_only: true`), desactivación de privilegios adicionales (`no-new-privileges: true`) y revocación total de capacidades del kernel (`cap_drop: ALL`).
 
+### 1.3. Controles Defensivos Avanzados y Guardrails IA (OWASP LLM 2025)
+
+El motor integra una capa defensiva activa validada mediante ejercicios de Red Team ofensivo:
+1. **Aislamiento Criptográfico RAG vs Narrativa (LLM01 / LLM08):** El contexto documental legítimo se encapsula de manera exclusiva bajo etiquetas `<trusted_rag_context origin="system_rag_knowledge_base">`, mientras que el relato del usuario se confina en `<patient_clinical_narrative>`.
+2. **Sanitizador Perimetral de Entrada:** Se purga cualquier intento del usuario de forzar etiquetas XML reservadas para prevenir suplantación de contexto (*Context Spoofing*). Las decisiones de alta médica o anulación de tratamiento requieren evaluación presencial y están bloqueadas desde relatos textuales.
+3. **Guardrail Post-Inferencia contra Código y SQL (LLM05):** Filtro regex en tiempo real sobre `objetivo`, `intervencion` y `acciones_a_seguir` que detecta y neutraliza sentencias SQL (`SELECT`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `UNION`, `EXEC`), código markdown y llamadas a shell.
+4. **Resiliencia de Esquemas ante DoS (LLM10):** Validadores Pydantic que transforman valores nulos o malformados en respuestas seguras neutrales, mitigando excepciones HTTP 500.
+5. **Certificación Pericial:** Consulte el [Reporte Pericial de Pentesting y Saneamiento](reporte-pericial-pentesting-y-saneacion.md) con las evidencias fotográficas de re-test.
+
 ---
 
 ## 2. Requisitos del Sistema y Portabilidad de Hardware

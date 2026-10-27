@@ -25,6 +25,7 @@
 4. **Motor RAG e Ingesta Documental:** Panel web seguro para cargar manuales clínicos (PDF, DOCX, TXT), convertirlos a Markdown, destruir de forma criptográfica el original e indexar fragmentos semánticos para inyectar como contexto al LLM.
 5. **Perímetro Cifrado y Aislamiento de Red:** Nginx con TLS 1.3 y lista blanca de IPs autorizadas como única puerta de enlace. Cero puertos de motores de IA expuestos al host.
 6. **Portabilidad de Hardware:** Configurable para operar con aceleración GPU (NVIDIA CUDA / Tensor Cores) o conmutar a 100% CPU puro con cuantización `int8`.
+7. **Guardrails y Mitigación de Red Team (OWASP LLM 2025):** Aislamiento XML estricto de contexto RAG (`<trusted_rag_context>`) contra suplantación (*Context Spoofing*), guardrail post-inferencia que neutraliza comandos SQL o código ejecutable en campos clínicos, y esquemas Pydantic resilientes contra DoS con certificación pericial.
 
 ---
 
@@ -300,7 +301,8 @@ Voice_AI_Engine/
 ## 9. Monitoreo y Administración
 
 - **Consola Portainer CE:** Ingrese a `https://127.0.0.1:9443` para supervisar el uso de CPU, memoria RAM y registros de depuración de cada microservicio.
-- **Reporte Certificado de Pruebas:** Consulte [docs/reporte-de-pruebas-y-validacion.md](docs/reporte-de-pruebas-y-validacion.md) para ver la validación funcional de los 6 microservicios.
+- **Reporte Certificado de Pruebas Operativas:** Consulte [docs/reporte-de-pruebas-y-validacion.md](docs/reporte-de-pruebas-y-validacion.md) para ver la validación funcional de los 6 microservicios.
+- **Auditoría Red Team y Saneamiento:** Consulte [docs/reporte-pericial-pentesting-y-saneacion.md](docs/reporte-pericial-pentesting-y-saneacion.md) para ver la matriz pericial CVSS v4.0, PoCs y evidencias fotográficas de re-test.
 - **Verificación de Salud de APIs:**
   ```bash
   python test_engine.py

@@ -1,5 +1,6 @@
 # Reporte Técnico de Pruebas y Validación Operativa
 **Proyecto:** Voice AI Engine (TalitaKum AI Engine)  
+**Autor / Responsable Técnico:** Juan Carlos Araneda M.  
 **Fecha de Ejecución:** 25 de Octubre de 2026  
 **Entorno:** Windows 11 Host + WSL2 (Docker Desktop)  
 **Estado General:** **100% EXITOSO (PASS)** — 6/6 Microservicios Saludables y Operativos

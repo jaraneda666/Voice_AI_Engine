@@ -4,6 +4,8 @@
 **Institución:** Centro Terapéutico Residencial (Institución de Salud Especializada)  
 **Versión del Sistema:** 1.0.0  
 **Clasificación:** Documentación Técnica de Ingeniería y Guía de Integración  
+**Autor / Responsable Técnico:** Juan Carlos Araneda M.  
+**Fecha de Emisión / Actualización:** 28 de Octubre de 2026  
 
 ---
 

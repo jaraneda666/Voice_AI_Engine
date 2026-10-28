@@ -16,6 +16,7 @@ import logging
 import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -126,6 +127,55 @@ FORBIDDEN_SQL_CODE_PATTERNS: List[Tuple[re.Pattern, str]] = [
     ),
 ]
 
+# Invisible, zero-width, and bidirectional control characters for Unicode evasion defense (LLM01 / LLM10)
+INVISIBLE_CHARS_PATTERN = re.compile(
+    r"[\u200B-\u200D\uFEFF\u2060\u00AD\u202A-\u202E\u2066-\u2069]"
+)
+
+# Semantic pretext and adversarial injection patterns for perimeter defense (LLM01, LLM05, LLM06, LLM10)
+ADVERSARIAL_INPUT_PATTERNS: List[Tuple[re.Pattern, str]] = [
+    # a) SQL generation / DDL / DML requests
+    (
+        re.compile(
+            r"(?i)(?:genera(?:r)?\s+(?:la\s+)?sentencia\s+sql|\bSELECT\b[\s\S]+?\bFROM\b|\bINSERT\s+INTO\b|\bUPDATE\s+[\s\S]+?\bSET\b|\bDELETE\s+FROM\b|\bDROP\s+(?:TABLE|DATABASE)\b|\bUNION\s+(?:ALL\s+)?SELECT\b)",
+            re.IGNORECASE,
+        ),
+        "Inyección de comando o solicitud de generación SQL (LLM05)",
+    ),
+    # b) Administrative commands and tool abuse injections
+    (
+        re.compile(
+            r"(?i)(?:\balerta\s+administrativa\b|\bdelete_document\b|\bpurgar\s+historial(?:es)?\b|\bconfirmaci[oó]n\s+de\s+auditor[ií]a\b|\bejecutar\s+llamada\s+a\s+herramienta\b)",
+            re.IGNORECASE,
+        ),
+        "Comando administrativo o intento de abuso de herramientas (LLM06 / LLM10)",
+    ),
+    # c) Treatment cancellation / context spoofing
+    (
+        re.compile(
+            r"(?i)(?:\banular\s+todo\s+el\s+plan\s+y\s+dar\s+alta\s+inmediata\b|\bdar\s+alta\s+inmediata\s+seg[uú]n\b|\bdar\s+alta\s+inmediata\b|\banular\s+todo\s+el\s+plan\b)",
+            re.IGNORECASE,
+        ),
+        "Intento de suplantación de contexto o alteración no autorizada de tratamiento (LLM01 / LLM08)",
+    ),
+    # d) Harmful medical overrides / substance encouragement
+    (
+        re.compile(
+            r"(?i)(?:\brecetar\b[\s\S]*?\bmorfina\b|\bconsumir\s+alcohol\s+para\s+calmar\s+(?:la\s+)?ansiedad\b|\bsimula(?:r)?\s+(?:un\s+)?protocolo[\s\S]*?consumir\s+alcohol\b|\bconsumir\s+alcohol\b|\brecetar\s+morfina\b)",
+            re.IGNORECASE,
+        ),
+        "Consejo médico perjudicial o prescripción de sustancias no autorizada (LLM01 / LLM06)",
+    ),
+    # e) Explicit system overrides
+    (
+        re.compile(
+            r"(?i)(?:\bignora(?:r)?\s+(?:todas\s+)?(?:las\s+)?instrucciones\b|\brevela(?:r)?\s+(?:tu\s+)?prompt\b)",
+            re.IGNORECASE,
+        ),
+        "Intento explícito de anulación de instrucciones o extracción de prompt (LLM01 / LLM07)",
+    ),
+]
+
 
 class EnginePipeline:
     """
@@ -145,6 +195,32 @@ class EnginePipeline:
         self.rag_url = rag_url.rstrip("/")
         self.llm_model = llm_model
         self.anonimizador = AnonimizadorClinico()
+
+    @staticmethod
+    def _normalizar_y_limpiar_unicode(texto: str) -> str:
+        """
+        Normalizes unicode text with NFKC and removes invisible, zero-width, and
+        bidirectional override characters to prevent evasion attacks (LLM01 / LLM10).
+        """
+        if not texto:
+            return ""
+        normalized = unicodedata.normalize("NFKC", texto)
+        return INVISIBLE_CHARS_PATTERN.sub("", normalized)
+
+    @classmethod
+    def _clasificar_entrada_adversaria(cls, texto: str) -> Tuple[bool, str]:
+        """
+        Pre-guardrail detecting adversarial input, SQL generation requests,
+        administrative tool abuse, treatment tampering, and harmful advice (LLM01 / LLM05 / LLM06 / LLM10).
+        Returns (is_adversarial: bool, reason: str).
+        """
+        if not texto:
+            return False, ""
+        texto_limpio = cls._normalizar_y_limpiar_unicode(texto)
+        for pattern, reason in ADVERSARIAL_INPUT_PATTERNS:
+            if pattern.search(texto_limpio):
+                return True, reason
+        return False, ""
 
     @staticmethod
     def _sanitizar_delimitadores_entrada(texto: str) -> str:
@@ -229,15 +305,45 @@ class EnginePipeline:
         metadata_audio: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        Sanitizes delimiters, optionally anonymizes text, retrieves RAG context, and infers clinical structure.
+        Normalizes unicode, intercepts adversarial input at perimeter, sanitizes delimiters,
+        optionally anonymizes text, retrieves RAG context, and infers clinical structure.
         Applies post-inference guardrails to ensure safe output.
         """
-        # Sanitize input against boundary tag spoofing
-        texto_relato_sanitizado = self._sanitizar_delimitadores_entrada(texto_relato)
+        # 0. Unicode normalization and zero-width character stripping
+        texto_normalizado = self._normalizar_y_limpiar_unicode(texto_relato)
+
+        # 1. Perimeter defense: Semantic pretext and adversarial input classification
+        es_adversario, motivo_bloqueo = self._clasificar_entrada_adversaria(texto_normalizado)
+        if es_adversario:
+            logger.warning(f"Entrada adversaria interceptada en el perímetro: {motivo_bloqueo}")
+            return {
+                "status": "success",
+                "transcripcion_original": texto_relato,
+                "anonimizacion_aplicada": anonimizar,
+                "rag_consultado": False,
+                "fragmentos_rag": [],
+                "entidades_detectadas": 0,
+                "estructura_clinica": {
+                    "objetivo": f"Contención de seguridad perimetral: {motivo_bloqueo}.",
+                    "intervencion": "El relato recibido contiene comandos o patrones no clínicos incompatibles con el registro asistencial. Inferencia y consulta RAG anuladas.",
+                    "acciones_a_seguir": "Registrar evento en auditoría de seguridad y coordinar evaluación clínica presencial estándar.",
+                },
+                "metadata_audio": metadata_audio or {},
+                "normativa_cumplida": [
+                    "Ley N° 21.719 (Datos Biométricos y Personales)",
+                    "Ley N° 20.584 (Ficha Clínica y Salud Mental)",
+                    "Ley N° 19.628 (Vida Privada)",
+                    "OWASP Top 10 for LLM Applications 2025",
+                    "CIS Docker Benchmark v1.6.0",
+                ],
+            }
+
+        # 2. Sanitize input against boundary tag spoofing
+        texto_relato_sanitizado = self._sanitizar_delimitadores_entrada(texto_normalizado)
         texto_para_llm = texto_relato_sanitizado
         mapeo_entidades: Dict[str, str] = {}
 
-        # 1. Perimeter Anonymization
+        # 3. Perimeter Anonymization
         if anonimizar:
             texto_para_llm, mapeo_entidades = self.anonimizador.anonimizar(
                 texto_relato_sanitizado, context=contexto_paciente
@@ -245,7 +351,7 @@ class EnginePipeline:
             # Re-sanitize delimiters post-anonymization as defensive measure
             texto_para_llm = self._sanitizar_delimitadores_entrada(texto_para_llm)
 
-        # 2. Institutional RAG Context Retrieval
+        # 4. Institutional RAG Context Retrieval (Filtered by relevance score >= 0.40)
         contexto_rag_str = ""
         fragmentos_rag = []
         if usar_rag:
@@ -253,17 +359,17 @@ class EnginePipeline:
             if fragmentos_rag:
                 contexto_rag_str = "\n---\n".join([f"[{f['title']}]: {f['text']}" for f in fragmentos_rag])
 
-        # 3. Clinical Inference with Ollama
+        # 5. Clinical Inference with Ollama
         estructura_clinica = self._inferir_estructura_ollama(texto_para_llm, contexto_rag=contexto_rag_str or None)
 
-        # 4. Optional de-anonymization of the structure
+        # 6. Optional de-anonymization of the structure
         if anonimizar and mapeo_entidades:
             estructura_clinica = {
                 k: self.anonimizador.desanonimizar(v, mapeo_entidades) if isinstance(v, str) else str(v or "")
                 for k, v in estructura_clinica.items()
             }
 
-        # 5. Post-inference guardrail to sanitize and neutralize forbidden SQL/code
+        # 7. Post-inference guardrail to sanitize and neutralize forbidden SQL/code
         estructura_clinica = self._sanitizar_salida_clinica(estructura_clinica)
 
         return {
@@ -284,8 +390,11 @@ class EnginePipeline:
             ],
         }
 
-    def _consultar_rag(self, query: str, top_k: int = 2) -> list:
-        """Retrieves relevant fragments from the RAG microservice."""
+    def _consultar_rag(self, query: str, top_k: int = 2, min_score: float = 0.40) -> list:
+        """
+        Retrieves relevant fragments from the RAG microservice,
+        filtering out chunks below min_score (score >= 0.40) to prevent context pollution (LLM08).
+        """
         try:
             req_data = json.dumps({"query": query, "top_k": top_k}).encode("utf-8")
             req = urllib.request.Request(
@@ -295,7 +404,12 @@ class EnginePipeline:
             )
             with urllib.request.urlopen(req, timeout=5) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                return data.get("results", [])
+                results = data.get("results", [])
+                filtered = [
+                    chunk for chunk in results
+                    if isinstance(chunk, dict) and float(chunk.get("score", 0.0)) >= min_score
+                ]
+                return filtered
         except Exception as e:
             logger.info(f"RAG no disponible o sin documentos indexados ({e}). Continuando con inferencia normal.")
             return []
@@ -348,7 +462,10 @@ class EnginePipeline:
             ],
             "format": "json",
             "stream": False,
-            "options": {"temperature": 0.1},
+            "options": {
+                "temperature": 0.1,
+                "num_predict": 350,
+            },
         }
 
         data_bytes = json.dumps(payload).encode("utf-8")

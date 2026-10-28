@@ -61,7 +61,15 @@
       "(?i)SELECT\\s+.*?\\s+FROM",
       "(?i)DROP\\s+TABLE",
       "(?i)DELETE\\s+FROM",
-      "(?i)ANULAR\\s+TODO\\s+EL\\s+PLAN"
+      "(?i)ANULAR\\s+TODO\\s+EL\\s+PLAN",
+      "(?i)genera(?:r)?\\s+(?:la\\s+)?sentencia\\s+sql",
+      "(?i)alerta\\s+administrativa",
+      "(?i)delete_document",
+      "(?i)purgar\\s+historial",
+      "(?i)ejecutar\\s+llamada\\s+a\\s+herramienta",
+      "(?i)recetar\\b.*?\\bmorfina",
+      "(?i)consumir\\s+alcohol",
+      "(?i)dar\\s+alta\\s+inmediata"
     ]
   }
 }

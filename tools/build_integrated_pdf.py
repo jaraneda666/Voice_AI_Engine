@@ -354,7 +354,7 @@ def build_html() -> str:
 <div class="cover">
     <div class="cover-header">
         <div class="cover-title">Voice AI Engine</div>
-        <div class="cover-subtitle">Manual Integral de Arquitectura, Operación y Referencia de API REST</div>
+        <div class="cover-subtitle">Informe Ejecutivo y Técnico: Arquitectura, Operación, API REST y Avance del Proyecto</div>
         <p style="color: #4a5568; font-size: 11pt; margin-top: 10px;">
             Subsistema Autónomo On-Premise y Multiplataforma de Inteligencia Artificial para Salud Mental, Adicciones y NLP Clínico
         </p>
@@ -379,8 +379,11 @@ def build_html() -> str:
             <div class="cover-meta-label">Institución / Ámbito:</div>
             <div class="cover-meta-val">Centro Terapéutico Residencial (Institución Especializada en Salud Mental)</div>
 
-            <div class="cover-meta-label">Fecha de Publicación:</div>
-            <div class="cover-meta-val">27 de Octubre de 2026</div>
+            <div class="cover-meta-label">Autor / Resp. Técnico:</div>
+            <div class="cover-meta-val">Juan Carlos Araneda M.</div>
+
+            <div class="cover-meta-label">Fecha de Emisión / Actualización:</div>
+            <div class="cover-meta-val">02 de Noviembre de 2026 (Consolidado de Avance)</div>
 
             <div class="cover-meta-label">Clasificación:</div>
             <div class="cover-meta-val">Documentación Técnica de Ingeniería, Arquitectura y Ciberseguridad</div>
@@ -403,6 +406,7 @@ def build_html() -> str:
     <div class="toc-item"><span>5. Capa de Seguridad Defensiva, Guardrails e Informe Red Team</span><span>Pág. 8</span></div>
     <div class="toc-item"><span>6. Manual de Integración de API REST (Endpoints & Payloads)</span><span>Pág. 11</span></div>
     <div class="toc-item"><span>7. Diagnóstico Operativo, Telemetría y Resolución de Problemas</span><span>Pág. 13</span></div>
+    <div class="toc-item"><span>8. Bitácora de Avance del Proyecto, Hitos y Estado de Consolidación</span><span>Pág. 15</span></div>
 </div>
 
 <!-- ====================================================================== -->
@@ -957,6 +961,158 @@ docker compose -f docker-compose.yml logs -f
 
 # Ejecución de la suite completa de pruebas unitarias:
 python test_engine.py</code></pre>
+
+
+<div class="page-break"></div>
+
+<!-- ====================================================================== -->
+<!-- 8. AVANCE DEL PROYECTO, HITOS Y CONSOLIDACIÓN -->
+<!-- ====================================================================== -->
+<h1>8. Bitácora de Avance del Proyecto, Hitos y Estado de Consolidación</h1>
+
+<p>
+    El desarrollo e implementación del ecosistema <strong>TalitaKum_AI_Engine</strong> ha seguido una metodología estructurada, transitando desde la formulación de la arquitectura base de microservicios hasta la certificación de seguridad pericial ofensiva y la estabilización de guardrails multicapa.
+</p>
+
+<h3>8.1. Cronograma de Hitos y Evolución Técnica</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Hito / Fase Técnica</th>
+            <th>Entregables y Componentes Clave</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>24-10-2026</strong></td>
+            <td>Inicialización del Subsistema Local Voice_AI_Engine</td>
+            <td>Estructuración inicial de contenedores Docker (FastAPI, Faster-Whisper, Ollama y RAG en FastAPI). Configuración de red bridge aislada <code>voice-ai-net</code>.</td>
+            <td><strong style="color: #22543d;">COMPLETADO</strong></td>
+        </tr>
+        <tr>
+            <td><strong>24-10-2026</strong></td>
+            <td>Portabilidad y Desacople Multiplataforma</td>
+            <td>Independización de rutas relativas y eliminación de dependencias del host. Creación de iniciadores <code>start.ps1</code> (Windows) y <code>start.sh</code> (Linux/macOS). Documentación de troubleshooting.</td>
+            <td><strong style="color: #22543d;">COMPLETADO</strong></td>
+        </tr>
+        <tr>
+            <td><strong>25-10-2026</strong></td>
+            <td>Autodetección de Hardware y Perfiles Dinámicos</td>
+            <td>Mecanismo de inspección de GPU NVIDIA y memoria RAM. Perfil CPU optimizado en cuantización int8 para hardware con VRAM &lt; 6 GB. Validación operativa 6/6 servicios con reporte técnico.</td>
+            <td><strong style="color: #22543d;">COMPLETADO</strong></td>
+        </tr>
+        <tr>
+            <td><strong>27-10-2026</strong></td>
+            <td>Soporte Cloud / Render.com</td>
+            <td>Desarrollo del blueprint declarativo <code>render.yaml</code>, instalador automatizado <code>install_render.sh</code> y perfiles por tiers (1, 2 y 3) para servidores sin GPU dedicada.</td>
+            <td><strong style="color: #22543d;">COMPLETADO</strong></td>
+        </tr>
+        <tr>
+            <td><strong>27-10-2026</strong></td>
+            <td>Auditoría Ofensiva Red Team (Pentest Inicial)</td>
+            <td>Ejecución de pentesting Grey Box bajo OWASP LLM 2025. Detección de 3 vectores: Context Spoofing RAG (LLM01/LLM08), generación SQL (LLM05) y excepción HTTP 500 (LLM10).</td>
+            <td><strong style="color: #22543d;">COMPLETADO</strong></td>
+        </tr>
+        <tr>
+            <td><strong>27-10-2026</strong></td>
+            <td>Saneamiento Perimetral y Re-Test Certificado</td>
+            <td>Aislamiento XML de contexto RAG, sanitización regex post-inferencia contra sentencias SQL y esquemas Pydantic resilientes. Re-test al 100% con evidencias fotográficas.</td>
+            <td><strong style="color: #22543d;">COMPLETADO</strong></td>
+        </tr>
+        <tr>
+            <td><strong>28-10-2026</strong></td>
+            <td>Endurecimiento Defensivo Avanzado (Guardrails de Entrada)</td>
+            <td>Incorporación de normalización Unicode contra ataques zero-width, clasificador semántico de entrada (bloqueo de abusos administrativos, jailbreaks y asesorías perjudiciales) y umbral estricto RAG (score &ge; 0.40). Suite <code>test_engine.py</code> ampliada a 11 pruebas (100% PASS).</td>
+            <td><strong style="color: #22543d;">COMPLETADO</strong></td>
+        </tr>
+        <tr>
+            <td><strong>28-10-2026</strong></td>
+            <td>Estandarización Global de Metadatos y Autoría</td>
+            <td>Adopción formal de la regla de encabezado obligatorio (Autor y Fecha) en toda la documentación y reportes técnicos del proyecto.</td>
+            <td><strong style="color: #22543d;">COMPLETADO</strong></td>
+        </tr>
+        <tr>
+            <td><strong>02-11-2026</strong></td>
+            <td>Consolidación Integral y Auditoría Anti-Slop</td>
+            <td>Generación del presente informe integrado, auditoría rigurosa de estilo técnico directo (framework no-ai-slop) y verificación de paridad entre código fuente, manuales y contenedor.</td>
+            <td><strong style="color: #22543d;">CONSOLIDADO</strong></td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>8.2. Matriz de Componentes del Stack y Estado Operativo</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Componente</th>
+            <th>Ruta / Servicio</th>
+            <th>Tecnología / Versión</th>
+            <th>Estado de Implementación</th>
+            <th>Verificación Técnica</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Proxy Inverso</strong></td>
+            <td><code>voice-nginx-proxy</code></td>
+            <td>Nginx 1.27 Alpine (TLS 1.3, Whitelist IP, Rate-Limit)</td>
+            <td><strong style="color: #22543d;">Operativo</strong></td>
+            <td>Validado en puerto 8443 con terminación segura y bloqueo de subredes no autorizadas.</td>
+        </tr>
+        <tr>
+            <td><strong>Orquestador Gateway</strong></td>
+            <td><code>voice-ai-gateway</code></td>
+            <td>FastAPI + Pydantic v2 (Non-root UID 10001)</td>
+            <td><strong style="color: #22543d;">Operativo</strong></td>
+            <td>Endurecido con guardrail semántico de entrada, pasarela de anonimización y sanitizador SQL.</td>
+        </tr>
+        <tr>
+            <td><strong>Transcripción STT</strong></td>
+            <td><code>voice-whisper-service</code></td>
+            <td>Faster-Whisper Large-v3-Turbo / int8</td>
+            <td><strong style="color: #22543d;">Operativo</strong></td>
+            <td>Procesamiento confinado en memoria RAM volátil (<code>tmpfs</code>) con destrucción física garantizada.</td>
+        </tr>
+        <tr>
+            <td><strong>Inferencia LLM</strong></td>
+            <td><code>voice-ollama-service</code></td>
+            <td>Ollama (Llama-3.1-8B-Instruct-q4_K_M / Qwen 2.5)</td>
+            <td><strong style="color: #22543d;">Operativo</strong></td>
+            <td>Inferencia local estricta sin conexión externa; plantillas estructuradas JSON.</td>
+        </tr>
+        <tr>
+            <td><strong>Motor RAG</strong></td>
+            <td><code>voice-rag-service</code></td>
+            <td>FastAPI + Vector Search Coseno + PyPDF/Docx</td>
+            <td><strong style="color: #22543d;">Operativo</strong></td>
+            <td>Panel web en <code>/rag/</code>, shredding DoD 5220.22-M del documento original y umbral mínimo 0.40.</td>
+        </tr>
+        <tr>
+            <td><strong>Gestión y Métricas</strong></td>
+            <td><code>voice-portainer</code></td>
+            <td>Portainer CE 2.21.5 Alpine</td>
+            <td><strong style="color: #22543d;">Operativo</strong></td>
+            <td>Monitoreo en puerto HTTPS 9443 para control de contenedores y recursos.</td>
+        </tr>
+        <tr>
+            <td><strong>Suite de Pruebas</strong></td>
+            <td><code>test_engine.py</code></td>
+            <td>Python unittest (11 casos de prueba)</td>
+            <td><strong style="color: #22543d;">100% PASS</strong></td>
+            <td>Evaluación perimetral de anonimización, guardrails de entrada, RAG, sanitización SQL y unicode.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>8.3. Dictamen Pericial de Consolidación</h3>
+<p>
+    El subsistema <strong>Voice_AI_Engine (TalitaKum AI Engine)</strong> se encuentra plenamente funcional, documentado y blindado contra vectores adversarios conocidos bajo las directrices de ciberseguridad defensiva y privacidad vigentes (Ley N° 21.719, OWASP LLM 2025 y CIS Docker Benchmark).
+</p>
+<p>
+    La arquitectura garantiza aislamiento de datos sensibles, alta disponibilidad en hardware heterogéneo y capacidad de integración directa con sistemas de ficha clínica electrónica mediante su interfaz REST estandarizada.
+</p>
 
 <div class="footer-note">
     Voice_AI_Engine &bull; Manual de Arquitectura e Integración &bull; Documento Técnico Confidencial &bull; Centro Terapéutico Residencial

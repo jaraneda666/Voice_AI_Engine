@@ -237,6 +237,7 @@ async def transcribe_audio(file: UploadFile = File(...)):
     Recibe audio (.wav o .webm), lo almacena en RAM volátil (/tmp/audio_ram),
     ejecuta la transcripción con Faster-Whisper y destruye irreversiblemente el archivo.
     """
+    global whisper_engine, engine_device_in_use, engine_compute_in_use
     if whisper_engine is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -312,6 +313,52 @@ async def transcribe_audio(file: UploadFile = File(...)):
     except HTTPException:
         raise
     except Exception as exc:
+        if settings.whisper_cpu_fallback and ("libcublas" in str(exc) or "CUDA" in str(exc) or "cuda" in str(exc)):
+            logger.warning(f"Acelerador GPU no disponible en ejecución ({exc}). Activando CPU Fallback inmediato...")
+            try:
+                whisper_engine = WhisperModel(
+                    model_size_or_path=settings.whisper_model,
+                    device="cpu",
+                    compute_type="int8",
+                    download_root="/models"
+                )
+                engine_device_in_use = "cpu"
+                engine_compute_in_use = "int8"
+                segments_generator, info = whisper_engine.transcribe(
+                    str(temp_audio_path),
+                    language="es",
+                    task="transcribe",
+                    beam_size=5,
+                    vad_filter=True,
+                    vad_parameters=dict(min_silence_duration_ms=500)
+                )
+                full_text_list = []
+                segments_output = []
+                for seg in segments_generator:
+                    full_text_list.append(seg.text.strip())
+                    segments_output.append(
+                        TranscriptionSegment(
+                            id=seg.id,
+                            start=round(seg.start, 2),
+                            end=round(seg.end, 2),
+                            text=seg.text.strip()
+                        )
+                    )
+                consolidated_text = " ".join(full_text_list)
+                return TranscriptionResponse(
+                    text=consolidated_text,
+                    language=info.language or "es",
+                    duration=round(info.duration, 2),
+                    segments=segments_output,
+                    biometric_purged=True
+                )
+            except Exception as cpu_exc:
+                logger.error(f"Error en CPU Fallback: {cpu_exc}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Fallo durante la transcripción fonética tras CPU Fallback: {str(cpu_exc)}"
+                )
+
         logger.error(f"Error procesando la inferencia de audio: {str(exc)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -9,7 +9,7 @@
 # - CIS Docker Benchmark v1.6.0: Contenedores non-root, read-only y cap_drop ALL
 # ==============================================================================
 
-name: voice_ai_engine
+name: talita-kum_voice_ai_engine
 
 networks:
   voice-ai-net:

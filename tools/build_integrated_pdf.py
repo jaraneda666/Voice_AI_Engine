@@ -869,9 +869,7 @@ def build_html() -> str:
   "normativa_cumplida": [
     "Ley N° 21.719 (Datos Biometricos y Personales)",
     "Ley N° 20.584 (Ficha Clinica y Salud Mental)",
-    "Ley N° 19.628 (Vida Privada)",
-    "OWASP Top 10 for LLM Applications 2025",
-    "CIS Docker Benchmark v1.6.0"
+    "Ley N° 19.628 (Vida Privada)"
   ]
 }}</code></pre>
 

@@ -336,8 +336,6 @@ class EnginePipeline:
                     "Ley N° 21.719 (Datos Biométricos y Personales)",
                     "Ley N° 20.584 (Ficha Clínica y Salud Mental)",
                     "Ley N° 19.628 (Vida Privada)",
-                    "OWASP Top 10 for LLM Applications 2025",
-                    "CIS Docker Benchmark v1.6.0",
                 ],
             }
 
@@ -388,8 +386,6 @@ class EnginePipeline:
                 "Ley N° 21.719 (Datos Biométricos y Personales)",
                 "Ley N° 20.584 (Ficha Clínica y Salud Mental)",
                 "Ley N° 19.628 (Vida Privada)",
-                "OWASP Top 10 for LLM Applications 2025",
-                "CIS Docker Benchmark v1.6.0",
             ],
         }
 

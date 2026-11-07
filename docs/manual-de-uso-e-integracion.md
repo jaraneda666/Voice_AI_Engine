@@ -472,7 +472,7 @@ Portainer CE permite monitorear el consumo de recursos, inspeccionar registros d
 ### 7.9. Conflicto de Nombres de Contenedor ("The container name ... is already in use")
 - **Síntoma:** Docker Compose falla indicando `Conflict. The container name "/voice-rag-service" is already in use by container...`.
 - **Causa:** Ocurre cuando se ejecuta Docker Compose desde carpetas con diferentes nombres (por ejemplo `Voice_AI_Engine` y `TalitaKum_AI_Engine`), lo que provoca que Docker Compose infiera nombres de proyecto distintos para contenedores que tienen nombres fijos (`container_name: ...`).
-- **Solución:** `docker-compose.yml` define de forma explícita la clave raíz `name: voice_ai_engine`, asegurando un espacio de nombres único y predecible independientemente del nombre del directorio de trabajo.
+- **Solución:** `docker-compose.yml` define de forma explícita la clave raíz `name: talita-kum_voice_ai_engine`, asegurando un espacio de nombres único y predecible independientemente del nombre del directorio de trabajo.
 
 ### 7.10. Verificación Integral Automatizada y Reporte Certificado
 Para verificar que todos los servicios y conexiones internas operen según los estándares de diseño, ejecute los scripts de validación:

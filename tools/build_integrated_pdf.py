@@ -383,7 +383,7 @@ def build_html() -> str:
             <div class="cover-meta-val">Juan Carlos Araneda M.</div>
 
             <div class="cover-meta-label">Fecha de Emisión / Actualización:</div>
-            <div class="cover-meta-val">02 de Noviembre de 2026 (Consolidado de Avance)</div>
+            <div class="cover-meta-val">07 de Noviembre de 2026 (Estándar Ficha Kimün)</div>
 
             <div class="cover-meta-label">Clasificación:</div>
             <div class="cover-meta-val">Documentación Técnica de Ingeniería, Arquitectura y Ciberseguridad</div>
@@ -862,8 +862,9 @@ def build_html() -> str:
   "entidades_detectadas": 2,
   "estructura_clinica": {{
     "objetivo": "Abordaje de episodio de craving y contencion emocional en entorno comunitario",
-    "intervencion": "Aplicacion de tecnica respiratoria 4-7-8 y reestructuracion cognitiva breve segun protocolo institucional",
-    "acciones_a_seguir": "Mantener registro de pensamientos automaticos y seguimiento en asamblea comunitaria"
+    "descripcion": "Aplicacion de tecnica respiratoria 4-7-8 y reestructuracion cognitiva breve segun protocolo institucional",
+    "resultados": "Disminucion de craving de 8/10 a 3/10 y estabilizacion afectiva observada",
+    "observaciones": "Mantener registro de pensamientos automaticos y seguimiento en asamblea comunitaria"
   }},
   "normativa_cumplida": [
     "Ley N° 21.719 (Datos Biometricos y Personales)",
@@ -1036,8 +1037,14 @@ python test_engine.py</code></pre>
         <tr>
             <td><strong>02-11-2026</strong></td>
             <td>Consolidación Integral y Auditoría Anti-Slop</td>
-            <td>Generación del presente informe integrado, auditoría rigurosa de estilo técnico directo (framework no-ai-slop) y verificación de paridad entre código fuente, manuales y contenedor.</td>
-            <td><strong style="color: #22543d;">CONSOLIDADO</strong></td>
+            <td>Generación del informe integrado, auditoría rigurosa de estilo técnico directo (framework no-ai-slop) y verificación de paridad entre código fuente, manuales y contenedor.</td>
+            <td><strong style="color: #22543d;">COMPLETADO</strong></td>
+        </tr>
+        <tr>
+            <td><strong>07-11-2026</strong></td>
+            <td>Estandarización a Formato Kimün y Ficha Técnica BrainLOF</td>
+            <td>Actualización del motor a las 4 secciones oficiales de Kimün (objetivo, descripcion, resultados, observaciones), sincronización con backend, emisión de la Ficha Técnica de Modelos para dimensionamiento de hosting en BrainLOF y revalidación de la suite test_engine.py (11/11 PASS).</td>
+            <td><strong style="color: #22543d;">COMPLETADO</strong></td>
         </tr>
     </tbody>
 </table>

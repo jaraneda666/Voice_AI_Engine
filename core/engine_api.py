@@ -48,18 +48,22 @@ class TextoInput(BaseModel):
 class EstructuraClinicaOut(BaseModel):
     objetivo: str = Field(
         default="No especificado / Sin contenido clínico identificable",
-        description="Propósito clínico identificado",
+        description="Propósito técnico central y motivo de la atención (Kimün)",
     )
-    intervencion: str = Field(
-        default="Sin intervención clínica reportada",
-        description="Detalle terapéutico o sintomatología",
+    descripcion: str = Field(
+        default="Sin descripción clínica de la sesión reportada",
+        description="Desarrollo de la sesión, examen mental, sintomatología y técnicas (Kimün)",
     )
-    acciones_a_seguir: str = Field(
+    resultados: str = Field(
+        default="Sin resultados inmediatos o logros conductuales observados",
+        description="Logros observados, respuesta emocional y disminución de craving (Kimün)",
+    )
+    observaciones: str = Field(
         default="Mantener observación y seguimiento regular",
-        description="Acciones, derivaciones o tareas intersesión",
+        description="Tareas conductuales intersesión, compromisos y próxima citación (Kimün)",
     )
 
-    @field_validator("objetivo", "intervencion", "acciones_a_seguir", mode="before")
+    @field_validator("objetivo", "descripcion", "resultados", "observaciones", mode="before")
     @classmethod
     def sanitize_field_value(cls, v: Any, info) -> str:
         """
@@ -68,8 +72,9 @@ class EstructuraClinicaOut(BaseModel):
         """
         fallback_map = {
             "objetivo": "No especificado / Sin contenido clínico identificable",
-            "intervencion": "Sin intervención clínica reportada",
-            "acciones_a_seguir": "Mantener observación y seguimiento regular",
+            "descripcion": "Sin descripción clínica de la sesión reportada",
+            "resultados": "Sin resultados inmediatos o logros conductuales observados",
+            "observaciones": "Mantener observación y seguimiento regular",
         }
         fallback = fallback_map.get(info.field_name, "No especificado")
         if v is None:

@@ -21,7 +21,7 @@
 
 1. **Transcripción Fonética Volátil:** Procesa archivos de audio en memoria RAM volátil (`tmpfs` en `/tmp/audio_ram`) mediante `faster-whisper` (`large-v3-turbo`) y ejecuta destrucción física irreversible tras la transcripción (Ley N° 21.719).
 2. **Pasarela de Anonimización Perimetral Reversible:** Tokeniza identidades sensibles (RUTs chilenos, nombres de pacientes y profesionales) bajo las Leyes N° 19.628 y 20.584 antes de cualquier inferencia analítica.
-3. **Estructuración Clínica con LLM Local:** Homologa relatos terapéuticos en tres campos normalizados (`objetivo`, `intervencion`, `acciones_a_seguir`) con Ollama (`llama3.1:8b-instruct-q4_K_M`) y mitigación de inyección de prompts bajo OWASP LLM 2025.
+3. **Estructuración Clínica con LLM Local:** Homologa relatos terapéuticos en los cuatro campos estandarizados de Kimün (`objetivo`, `descripcion`, `resultados`, `observaciones`) con Ollama (`llama3.1:8b-instruct-q4_K_M`), guardrails contra inyección de prompts (OWASP LLM 2025) y verificación activa de fuga de PII (`verificar_fuga_pii`). Cero fabricación de diagnósticos sintéticos ante fallos de conectividad.
 4. **Motor RAG e Ingesta Documental:** Panel web seguro para cargar manuales clínicos (PDF, DOCX, TXT), convertirlos a Markdown, destruir de forma criptográfica el original e indexar fragmentos semánticos para inyectar como contexto al LLM.
 5. **Perímetro Cifrado y Aislamiento de Red:** Nginx con TLS 1.3 y lista blanca de IPs autorizadas como única puerta de enlace. Cero puertos de motores de IA expuestos al host.
 6. **Portabilidad de Hardware:** Configurable para operar con aceleración GPU (NVIDIA CUDA / Tensor Cores) o conmutar a 100% CPU puro con cuantización `int8`.
@@ -114,7 +114,19 @@ git clone https://github.com/jaraneda666/Voice_AI_Engine.git
 cd Voice_AI_Engine
 ```
 
-### 2. Inicio Automático con Detección Inteligente de Hardware (Recomendado)
+### 2. Generación Local de Certificados TLS (Mitigación TKAI-001)
+
+En cumplimiento de las normas OWASP A02:2021 / CWE-321, las claves criptográficas privadas (`server.key`) **no se versionan en Git**. Para generar tus certificados TLS autofirmados locales de desarrollo antes del primer arranque:
+
+```bash
+# Multiplataforma (Windows PowerShell o Linux con Python):
+python nginx/certs/generate_certs.py
+
+# O en Linux / macOS con OpenSSL:
+bash nginx/certs/generate_certs.sh
+```
+
+### 3. Inicio Automático con Detección Inteligente de Hardware (Recomendado)
 
 El repositorio incluye iniciadores inteligentes que inspeccionan en tiempo real la arquitectura, la RAM física, los vCPUs de Docker, la presencia de GPU NVIDIA y la memoria VRAM disponible (`nvidia-smi`), seleccionando y justificando de forma automática el perfil óptimo (GPU o CPU):
 
@@ -195,14 +207,20 @@ https://127.0.0.1:8443/rag/
 
 Todas las llamadas deben emitirse por HTTPS hacia el puerto **8443**.
 
+> [!IMPORTANT]
+> **Autenticación en Gateway (Mitigación TKAI-002):**  
+> Toda petición a los endpoints analíticos (`/api/v1/process-text` y `/api/v1/process-audio`) requiere autenticación mediante token interno si `ENVIRONMENT=production` o si `AI_ENGINE_INTERNAL_TOKEN` está configurado. Se acepta vía cabecera `Authorization: Bearer <token>` o `X-CAT-Internal-Token: <token>`.
+
 ### 7.1. Estructuración de Texto Clínico con RAG
 
 **Endpoint:** `POST https://127.0.0.1:8443/api/v1/process-text`  
 **Content-Type:** `application/json`  
+**Cabecera de Autenticación:** `Authorization: Bearer <AI_ENGINE_INTERNAL_TOKEN>` o `X-CAT-Internal-Token: <token>`
 
 #### Ejemplo con cURL:
 ```bash
 curl -k -X POST "https://127.0.0.1:8443/api/v1/process-text" \
+  -H "Authorization: Bearer mi-token-secreto-interno" \
   -H "Content-Type: application/json" \
   -d '{
     "texto": "El paciente Juan Perez presenta episodio agudo de craving tras conflicto familiar. Se muestra ansioso y pide abandonar la comunidad.",
@@ -213,7 +231,7 @@ curl -k -X POST "https://127.0.0.1:8443/api/v1/process-text" \
   }'
 ```
 
-#### Respuesta de la API (HTTP 200 OK):
+#### Respuesta de la API (HTTP 200 OK — 4 Secciones Kimün):
 ```json
 {
   "status": "success",
@@ -230,8 +248,9 @@ curl -k -X POST "https://127.0.0.1:8443/api/v1/process-text" \
   "entidades_detectadas": 2,
   "estructura_clinica": {
     "objetivo": "Gestionar el episodio agudo de craving y prevenir el abandono del tratamiento",
-    "intervencion": "Aplicacion de tecnica de respiracion 4-7-8, hidratacion con sales y contencion por terapeuta par segun protocolo institucional",
-    "acciones_a_seguir": "Monitoreo continuo de ansiedad, seguimiento en asamblea comunitaria y evaluacion medica si craving supera 8/10"
+    "descripcion": "Aplicación de técnica de respiración 4-7-8, hidratación y contención por terapeuta par según protocolo institucional.",
+    "resultados": "Disminución progresiva del craving de 8/10 a 3/10 y estabilización emocional del paciente.",
+    "observaciones": "Monitoreo continuo de ansiedad, seguimiento en asamblea comunitaria y evaluación médica si craving supera 8/10."
   },
   "normativa_cumplida": [
     "Ley N° 21.719 (Datos Biometricos y Personales)",
@@ -247,9 +266,11 @@ curl -k -X POST "https://127.0.0.1:8443/api/v1/process-text" \
 
 **Endpoint:** `POST https://127.0.0.1:8443/api/v1/process-audio`  
 **Content-Type:** `multipart/form-data`  
+**Cabecera de Autenticación:** `Authorization: Bearer <AI_ENGINE_INTERNAL_TOKEN>` o `X-CAT-Internal-Token: <token>`
 
 ```bash
 curl -k -X POST "https://127.0.0.1:8443/api/v1/process-audio" \
+  -H "Authorization: Bearer mi-token-secreto-interno" \
   -F "file=@sesion_clinica.webm;type=audio/webm" \
   -F "anonimizar=true" \
   -F "usar_rag=true" \
@@ -258,6 +279,23 @@ curl -k -X POST "https://127.0.0.1:8443/api/v1/process-audio" \
 ```
 
 El audio se procesa en el volumen volátil `/tmp/audio_ram` y es eliminado inmediatamente después de la inferencia fonética.
+
+### 7.3. Política de Fallback Seguro ante Indisponibilidad de Ollama (TKAI-009)
+
+En estricto cumplimiento de la Ley N° 20.584 (Ficha Clínica), el sistema **nunca inventa diagnósticos ni logros clínicos sintéticos falsos** cuando el motor LLM no responde. En caso de caída técnica, la API devuelve:
+
+```json
+{
+  "status": "success",
+  "estructura_clinica": {
+    "objetivo": "[Indisponibilidad técnica de IA: inferencia no ejecutada - registro manual requerido]",
+    "descripcion": "[El motor de lenguaje no respondió. Relato capturado para registro manual: ...]",
+    "resultados": "[Sin resultados automáticos por indisponibilidad de inferencia LLM]",
+    "observaciones": "[Completar evaluación clínica y observaciones manualmente según protocolo institucional]"
+  }
+}
+```
+Esto preserva íntegro el relato original para que el profesional de la salud complete la atención de forma manual sin contaminación de datos clínicos.
 
 ---
 
@@ -272,7 +310,9 @@ Voice_AI_Engine/
 ├── rag-service/                # Ingesta documental, shredding, Markdown y búsqueda vectorial
 │   ├── app/                    # Código de servicio FastAPI y Dashboard Web HTML/JS
 │   └── data/                   # Volumen persistente para archivos Markdown (.md) e índices
-├── nginx/                      # Configuración de proxy inverso TLS 1.3 y certificados
+├── nginx/                      # Configuración de proxy inverso TLS 1.3
+│   ├── nginx.conf              # Reglas de enrutamiento, rate-limiting y whitelist
+│   └── certs/                  # Generación dinámica de TLS (generate_certs.py/.sh, README)
 ├── docs/                       # Documentación técnica, manuales y especificaciones
 │   ├── manual-de-uso-e-integracion.md
 │   ├── manual-de-arquitectura-e-integracion.pdf # Manual integral unificado en PDF (14 págs.)

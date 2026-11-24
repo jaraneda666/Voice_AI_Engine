@@ -5,7 +5,7 @@
 **Versión del Sistema:** 1.0.0  
 **Clasificación:** Documentación Técnica de Ingeniería y Guía de Integración  
 **Autor / Responsable Técnico:** Juan Carlos Araneda M.  
-**Fecha de Emisión / Actualización:** 28 de Octubre de 2026  
+**Fecha de Emisión / Actualización:** 24 de Noviembre de 2026  
 
 ---
 
@@ -19,9 +19,9 @@ El stack se compone de seis contenedores especializados que interactúan a trav�
 
 1. **Proxy Inverso Nginx (`voice-nginx-proxy`):** Único punto de entrada perimetral expuesto en el host (puerto 8443). Gestiona cifrado TLS 1.3, mitigación de ataques con rate-limiting y control de acceso mediante lista blanca de direcciones IP y subredes autorizadas.
 2. **Motor RAG e Ingesta Documental (`voice-rag-service`):** Gestiona la carga de documentos institucionales (PDF, DOCX, TXT), su conversión automática a Markdown estructurado, la partición semántica en fragmentos y la destrucción física irreversible del archivo original. Expone una interfaz web en `/rag/` y endpoints de consulta semántica en el puerto interno 8090.
-3. **API Gateway de Orquestación (`voice-ai-gateway`):** Microservicio FastAPI interno (puerto 8080) que coordina el flujo completo: recibe peticiones, ejecuta la pasarela de anonimización reversible, recupera contexto relevante desde el servicio RAG e invoca a Ollama y Whisper.
+3. **API Gateway de Orquestación (`voice-ai-gateway`):** Microservicio FastAPI interno (puerto 8080) que coordina el flujo completo: autentica peticiones mediante token interno (TKAI-002), ejecuta la pasarela de anonimización reversible, recupera contexto relevante desde el servicio RAG e invoca a Ollama y Whisper.
 4. **Servicio de Transcripción Fonética (`voice-whisper-service`):** Motor de inferencia basado en `faster-whisper` (CTranslate2) con el modelo `large-v3-turbo`. Procesa archivos de audio montados en memoria RAM volátil (`tmpfs` en `/tmp/audio_ram`) y destruye físicamente el contenido tras la transcripción.
-5. **Servicio de Lenguaje Clínico (`voice-ollama-service`):** Instancia local de Ollama configurada con usuario no-root `10001:10001` y modelo `llama3.1:8b-instruct-q4_K_M`. Homologa narrativas clínicas en tres campos estructurados (`objetivo`, `intervencion`, `acciones_a_seguir`) aplicando delimitadores de texto pasivo bajo el estándar OWASP LLM 2025.
+5. **Servicio de Lenguaje Clínico (`voice-ollama-service`):** Instancia local de Ollama configurada con usuario no-root `10001:10001` y modelo `llama3.1:8b-instruct-q4_K_M`. Homologa narrativas clínicas en los cuatro campos estandarizados de Kimün (`objetivo`, `descripcion`, `resultados`, `observaciones`) aplicando delimitadores de texto pasivo bajo el estándar OWASP LLM 2025 y guardrail perimetral de fuga de PII (`verificar_fuga_pii`).
 6. **Panel de Gestión Portainer CE (`voice-portainer`):** Interfaz gráfica de administración y telemetría de contenedores accesible mediante canal cifrado SSL en el puerto 9443.
 
 ### 1.2. Marco Normativo y Cumplimiento
@@ -34,12 +34,16 @@ El stack se compone de seis contenedores especializados que interactúan a trav�
 
 ### 1.3. Controles Defensivos Avanzados y Guardrails IA (OWASP LLM 2025)
 
-El motor integra una capa defensiva activa validada mediante ejercicios de Red Team ofensivo:
+El motor integra una capa defensiva activa validada mediante ejercicios de Red Team ofensivo y auditorías de pentesting:
 1. **Aislamiento Criptográfico RAG vs Narrativa (LLM01 / LLM08):** El contexto documental legítimo se encapsula de manera exclusiva bajo etiquetas `<trusted_rag_context origin="system_rag_knowledge_base">`, mientras que el relato del usuario se confina en `<patient_clinical_narrative>`.
 2. **Sanitizador Perimetral de Entrada:** Se purga cualquier intento del usuario de forzar etiquetas XML reservadas para prevenir suplantación de contexto (*Context Spoofing*). Las decisiones de alta médica o anulación de tratamiento requieren evaluación presencial y están bloqueadas desde relatos textuales.
-3. **Guardrail Post-Inferencia contra Código y SQL (LLM05):** Filtro regex en tiempo real sobre `objetivo`, `intervencion` y `acciones_a_seguir` que detecta y neutraliza sentencias SQL (`SELECT`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `UNION`, `EXEC`), código markdown y llamadas a shell.
+3. **Guardrail Post-Inferencia contra Código y SQL (LLM05):** Filtro regex en tiempo real sobre `objetivo`, `descripcion`, `resultados` y `observaciones` que detecta y neutraliza sentencias SQL (`SELECT`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `UNION`, `EXEC`), código markdown y llamadas a shell.
 4. **Resiliencia de Esquemas ante DoS (LLM10):** Validadores Pydantic que transforman valores nulos o malformados en respuestas seguras neutrales, mitigando excepciones HTTP 500.
-5. **Certificación Pericial:** Consulte el [Reporte Pericial de Pentesting y Saneamiento](reporte-pericial-pentesting-y-saneacion.md) con las evidencias fotográficas de re-test.
+5. **Autenticación en Gateway (TKAI-002 / OWASP API2:2023):** Acceso protegido en `/api/v1/process-text` y `/api/v1/process-audio` mediante token interno (`AI_ENGINE_INTERNAL_TOKEN`) por cabeceras `Authorization: Bearer` o `X-CAT-Internal-Token`.
+6. **Saneamiento de CORS y Claves TLS Dinámicas (TKAI-001/003):** Se eliminó el comodín de orígenes con credenciales a favor de una whitelist parametrizable (`ALLOWED_ORIGINS`). Las claves TLS privadas se purgaron del repositorio Git y se generan localmente con scripts dinámicos.
+7. **Política de Fallback No-Sintético (TKAI-009):** Erradicación total de diagnósticos prefabricados ante caídas de Ollama; se emite aviso formal de indisponibilidad técnica exigiendo registro manual según la Ley N° 20.584.
+8. **Auditoría de Fuga de PII (TKAI-006):** Invocación activa de `verificar_fuga_pii()` previo a cualquier despacho de datos al motor de inferencia.
+9. **Certificación Pericial:** Consulte el [Reporte Pericial de Pentesting y Saneamiento](reporte-pericial-pentesting-y-saneacion.md) con las evidencias fotográficas de re-test.
 
 ---
 

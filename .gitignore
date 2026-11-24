@@ -7,10 +7,15 @@
 .env
 *.env.local
 
-# Certificados SSL locales para entorno de desarrollo (out-of-the-box)
-!nginx/certs/server.crt
-!nginx/certs/server.key
+# Certificados SSL y claves privadas (nunca commitear claves a Git - TKAI-001)
+nginx/certs/*.crt
+nginx/certs/*.key
+nginx/certs/*.pem
+nginx/certs/*.csr
 !nginx/certs/.gitkeep
+!nginx/certs/README.md
+!nginx/certs/generate_certs.py
+!nginx/certs/generate_certs.sh
 
 # Caches y bytecode de Python
 __pycache__/

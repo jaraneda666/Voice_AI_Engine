@@ -5,11 +5,13 @@ Security: OWASP Top 10 API Security | OWASP Web Application Security | Ley N° 2
 """
 
 import logging
+import os
 from typing import Any, Dict, Optional
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Security, UploadFile, status
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from core.pipeline import EnginePipeline
@@ -22,16 +24,67 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS restricted for authorized clients
+# ------------------------------------------------------------------------------
+# CORS: Whitelist estricta de orígenes (OWASP Top 10 API Security / CWE-942)
+# Se elimina allow_origins=["*"] junto a allow_credentials=True (TKAI-003)
+# ------------------------------------------------------------------------------
+allowed_origins_env = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000",
+)
+allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Restrict to client origins in production
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type", "X-CAT-Internal-Token"],
 )
 
 pipeline = EnginePipeline()
+
+# ------------------------------------------------------------------------------
+# Gateway Authentication Dependency (TKAI-002 / OWASP API2:2023 / CWE-306)
+# ------------------------------------------------------------------------------
+security_bearer = HTTPBearer(auto_error=False)
+
+
+def verify_gateway_auth(
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(security_bearer),
+    x_cat_internal_token: Optional[str] = Header(default=None, alias="X-CAT-Internal-Token"),
+) -> str:
+    """
+    Verifica la identidad del cliente que consume el Gateway de IA.
+    Acepta token vía Authorization: Bearer <token> o cabecera X-CAT-Internal-Token.
+    En entorno productivo (ENVIRONMENT=production) o si AI_ENGINE_INTERNAL_TOKEN
+    está configurado, la autenticación es obligatoria y estricta.
+    """
+    token = None
+    if credentials and credentials.credentials:
+        token = credentials.credentials
+    elif x_cat_internal_token:
+        token = x_cat_internal_token
+
+    expected_token = os.getenv("AI_ENGINE_INTERNAL_TOKEN", "").strip()
+    environment = os.getenv("ENVIRONMENT", "development").lower().strip()
+
+    if environment == "production" or expected_token:
+        if not expected_token:
+            logger.error("AI_ENGINE_INTERNAL_TOKEN no está configurado en entorno de producción.")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error de configuración interna de seguridad del gateway",
+            )
+        if not token or token != expected_token:
+            logger.warning("Intento de acceso no autorizado al Gateway de IA: token inválido o ausente.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Acceso no autorizado al Gateway de IA: se requiere token interno válido.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+    return token or "dev-unauthenticated"
 
 
 # ------------------------------------------------------------------------------
@@ -138,14 +191,19 @@ async def pydantic_validation_exception_handler(request, exc: ValidationError):
 # ------------------------------------------------------------------------------
 @app.get("/health", tags=["Salud"])
 def health_check():
+    """
+    Health check perimetral higienizado (TKAI-012 / OWASP A05:2021).
+    No divulga URLs internas de conexión, puertos de red ni trazas de infraestructura.
+    """
     return {
         "status": "online",
         "engine": "Voice_AI_Engine",
-        "servicios": {
-            "whisper": pipeline.whisper_url,
-            "ollama": pipeline.ollama_url,
-            "modelo_llm": pipeline.llm_model,
+        "services": {
+            "whisper": "connected" if pipeline.whisper_url else "disabled",
+            "ollama": "configured",
+            "llm_model": pipeline.llm_model,
         },
+        "version": "1.0.0",
         "normativa": ["Ley 21.719", "Ley 20.584", "Ley 19.628", "CIS Docker v1.6.0", "OWASP API", "OWASP LLM 2025"],
     }
 
@@ -157,10 +215,12 @@ async def procesar_audio(
     usar_rag: bool = Form(default=True),
     paciente_nombre: Optional[str] = Form(default=None),
     paciente_rut: Optional[str] = Form(default=None),
+    _auth: str = Depends(verify_gateway_auth),
 ):
     """
     Receives audio (.wav or .webm), transcribes via Whisper, anonymizes, retrieves RAG context,
     and infers clinical structure via Ollama with OWASP LLM 2025 protections.
+    Requiere autenticación de gateway mediante token interno (TKAI-002).
     """
     allowed_exts = {".wav", ".webm", ".mp3", ".ogg", ".m4a"}
     filename = file.filename or "audio.webm"
@@ -210,10 +270,14 @@ async def procesar_audio(
 
 
 @app.post("/api/v1/process-text", response_model=PipelineResponse, tags=["Pipeline IA"])
-def procesar_texto(input_data: TextoInput):
+def procesar_texto(
+    input_data: TextoInput,
+    _auth: str = Depends(verify_gateway_auth),
+):
     """
     Receives clinical text, applies perimeter anonymization, retrieves RAG protocols,
     and structures clinical sections with prompt injection and output handling mitigations.
+    Requiere autenticación de gateway mediante token interno (TKAI-002).
     """
     context = {}
     if input_data.paciente_nombre:

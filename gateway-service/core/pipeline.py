@@ -352,6 +352,12 @@ class EnginePipeline:
             # Re-sanitize delimiters post-anonymization as defensive measure
             texto_para_llm = self._sanitizar_delimitadores_entrada(texto_para_llm)
 
+            # TKAI-006 Remediación: Auditoría activa de fuga de PII antes de enviar al modelo LLM
+            if not self.anonimizador.verificar_fuga_pii(texto_para_llm):
+                logger.warning(
+                    "Advertencia de seguridad perimetral: persisten patrones detectables de RUT/email tras anonimización."
+                )
+
         # 4. Institutional RAG Context Retrieval (Filtered by relevance score >= 0.40)
         contexto_rag_str = ""
         fragmentos_rag = []
@@ -511,11 +517,16 @@ class EnginePipeline:
             return self._sanitizar_salida_clinica(self._fallback_heuristico(safe_narrative))
 
     def _fallback_heuristico(self, texto: str) -> Dict[str, str]:
-        """Deterministic generator when Ollama is unavailable, ensuring high availability (4 Kimün sections)."""
+        """
+        Remediación TKAI-009 / OWASP A04:2021 (Integrity Flaws):
+        No fabrica diagnósticos ni evaluaciones sintéticas falsas cuando el LLM falla.
+        Devuelve un estado formal de indisponibilidad técnica que exige registro asistencial
+        manual conforme a la Ley N° 20.584 y preserva la veracidad del expediente clínico.
+        """
         safe_snippet = texto[:300].strip() if texto else "Sin contenido clínico adicional reportado."
         return {
-            "objetivo": "Abordaje terapéutico y seguimiento integral del usuario en Centro Terapéutico Residencial.",
-            "descripcion": f"Se realiza sesión terapéutica analizando el estado general y factores de riesgo relatados: {safe_snippet}...",
-            "resultados": "Se observa adherencia al espacio terapéutico y comprensión de las pautas abordadas.",
-            "observaciones": "Continuar con plan de tratamiento ambulatorio/residencial y citar a próxima sesión de control.",
+            "objetivo": "[Indisponibilidad técnica de IA: inferencia no ejecutada - registro manual requerido]",
+            "descripcion": f"[El motor de lenguaje no respondió. Relato capturado para registro manual: {safe_snippet}...]",
+            "resultados": "[Sin resultados automáticos por indisponibilidad de inferencia LLM]",
+            "observaciones": "[Completar evaluación clínica y observaciones manualmente según protocolo institucional]",
         }

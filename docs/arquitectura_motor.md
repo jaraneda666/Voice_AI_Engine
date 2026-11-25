@@ -43,8 +43,10 @@ graph TD
 
 | Componente | Norma / Estándar | Mecanismo de Control |
 | :--- | :--- | :--- |
-| **Audio de Voz** | Ley N° 21.719 (Datos Biométricos) | Montaje exclusivo en `tmpfs` en RAM (`/tmp/audio_ram`). Destrucción física mediante sobrescritura con ceros (`0x00`) y bytes aleatorios (`urandom`) en bloque `finally`. Cero persistencia en disco. |
-| **Datos de Salud** | Ley N° 20.584 y Ley N° 19.628 | Pasarela perimetral de seudonimización antes de invocar cualquier modelo LLM. |
+| **Audio de Voz** | Ley N° 21.719 (Datos Biométricos) | Montaje exclusivo en `tmpfs` en RAM (`/tmp/audio_ram`). Destrucción física en modo `r+b` mediante sobrescritura con ceros (`0x00`) y bytes aleatorios (`urandom`) con `os.fsync()` forzado. Cero persistencia en disco. |
+| **Datos de Salud y PII** | Ley N° 21.719, Ley N° 20.584 y Ley N° 19.628 | Pasarela perimetral de seudonimización con detección exhaustiva de RUT, nombres, correos y telefonía chilena (móvil y fija), con validación activa anti-fuga (`verificar_fuga_pii`) previa a cualquier inferencia con LLMs. |
+| **Concurrencia y Event Loop** | Estándar de Disponibilidad API | Delegación asíncrona de inferencia y llamadas I/O de red vía `asyncio.to_thread` en endpoints FastAPI para garantizar capacidad de respuesta concurrente sin bloqueo del bucle de eventos. |
+| **Autenticación Perimetral** | OWASP API Security / CWE-208 | Validación de tokens de pasarela en tiempo constante (`hmac.compare_digest`) para mitigar ataques de canal lateral (Timing Attacks). |
 | **Contenedores Docker** | CIS Docker Benchmark v1.6.0 | Ejecución no-root (`10001:10001`), `read_only: true`, `cap_drop: ALL`, `no-new-privileges: true`. |
 | **Inferencia LLM** | OWASP Top 10 for LLM Applications 2025 | Delimitación estricta de contexto (`<<<NARRATIVA_CLINICA_INICIO>>>`), prompt pasivo anti-inyección y esquema JSON cerrado. |
 | **APIs Expuestas** | OWASP Top 10 API Security | Validación de esquemas con Pydantic v2, límites de carga (50 MB), sanitización de extensiones. |

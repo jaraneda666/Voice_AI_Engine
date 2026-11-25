@@ -8,7 +8,7 @@
 # ------------------------------------------------------------------------------
 # Stage 1: Build Dependencies
 # ------------------------------------------------------------------------------
-FROM python:3.11-slim-bookworm AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /build
 
@@ -30,7 +30,7 @@ RUN pip install --no-cache-dir --retries 5 --timeout 30 \
 # ------------------------------------------------------------------------------
 # Stage 2: Runtime Image (Hardened & Rootless)
 # ------------------------------------------------------------------------------
-FROM python:3.11-slim-bookworm AS runner
+FROM python:3.12-slim-bookworm AS runner
 
 # CIS Benchmark: Install only strictly needed runtime tools (ffmpeg for audio)
 RUN apt-get update && apt-get install -y --no-install-recommends \

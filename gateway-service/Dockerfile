@@ -8,7 +8,7 @@
 # ------------------------------------------------------------------------------
 # Stage 1: Build Dependencies
 # ------------------------------------------------------------------------------
-FROM python:3.11-slim-bookworm AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /build
 
@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir --retries 5 --timeout 20 \
 # ------------------------------------------------------------------------------
 # Stage 2: Runtime Image (Hardened & Rootless)
 # ------------------------------------------------------------------------------
-FROM python:3.11-slim-bookworm AS runner
+FROM python:3.12-slim-bookworm AS runner
 
 # Remove dangerous/unnecessary setuid/setgid binaries to prevent privilege escalation
 RUN find / -xdev -perm /6000 -type f -exec chmod a-s {} + 2>/dev/null || true

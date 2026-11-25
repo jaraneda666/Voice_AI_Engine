@@ -16,7 +16,18 @@ class AnonimizadorClinico:
     """
 
     PATRON_RUT = re.compile(r"\b\d{1,2}\.?\d{3}\.?\d{3}-[\dkK]\b|\b\d{7,8}-[\dkK]\b", re.IGNORECASE)
-    PATRON_TELEFONO = re.compile(r"\b(\+?56\s?)?(\d{9}|\d{8})\b")
+    PATRON_TELEFONO = re.compile(
+        r"(?:\+?56[\s.-]?)?"
+        r"(?:"
+        r"9[\s.-]?\d{4}[\s.-]?\d{4}"
+        r"|"
+        r"[2-9][\s.-]?\d{3,4}[\s.-]?\d{4}"
+        r"|"
+        r"\b56\d{9}\b"
+        r"|"
+        r"\b\d{8,9}\b"
+        r")"
+    )
     PATRON_EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
 
     def __init__(self):
@@ -69,11 +80,10 @@ class AnonimizadorClinico:
             mapping[token] = rut_match
 
         # 3. Detección y tokenización de números telefónicos
-        telefonos = self.PATRON_TELEFONO.findall(texto_procesado)
-        for i, tel in enumerate(set(telefonos)):
-            # findall con grupos devuelve tuplas, tomamos la coincidencia completa
-            tel_str = tel[0] if isinstance(tel, tuple) else tel
-            if tel_str.strip():
+        telefonos = [m.group(0) for m in self.PATRON_TELEFONO.finditer(texto_procesado)]
+        for i, tel_str in enumerate(set(telefonos)):
+            tel_limpio = tel_str.strip()
+            if tel_limpio:
                 token = f"[TELEFONO_{i+1}]"
                 texto_procesado = texto_procesado.replace(tel_str, token)
                 mapping[token] = tel_str
@@ -104,9 +114,9 @@ class AnonimizadorClinico:
 
     def verificar_fuga_pii(self, texto: str) -> bool:
         """
-        Verifica que el texto a enviar no contenga patrones evidentes de RUTs o correos.
+        Verifica que el texto a enviar no contenga patrones evidentes de RUTs, correos o teléfonos sin enmascarar.
         Retorna True si el texto es seguro (sin PII detectada), False si persisten datos expuestos.
         """
-        if self.PATRON_RUT.search(texto) or self.PATRON_EMAIL.search(texto):
+        if self.PATRON_RUT.search(texto) or self.PATRON_EMAIL.search(texto) or self.PATRON_TELEFONO.search(texto):
             return False
         return True

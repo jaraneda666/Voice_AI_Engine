@@ -86,7 +86,7 @@ def secure_shred_ram_file(file_path: Path) -> None:
 
         file_size = canonical_path.stat().st_size
         if file_size > 0:
-            with open(canonical_path, "ba+", buffering=0) as f:
+            with open(canonical_path, "r+b", buffering=0) as f:
                 # Paso 1: Sobrescritura con ceros
                 f.seek(0)
                 f.write(b"\x00" * file_size)

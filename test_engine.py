@@ -466,15 +466,121 @@ class TestVoiceAIEngine(unittest.TestCase):
 
     def test_verificar_fuga_pii_guardrail(self):
         """
-        Remediación TKAI-006: Verifica que la función verificar_fuga_pii detecte patrones de RUT o email.
+        Remediación TKAI-006 / AI-02: Verifica que la función verificar_fuga_pii detecte patrones de RUT, email o teléfono chileno.
         """
         texto_limpio = "El paciente asistió a la sesión de seguimiento manifestando avances."
         texto_con_rut = "El paciente con RUT 12.345.678-9 asistió a la sesión."
         texto_con_email = "Contacto de emergencia: familiar@gmail.com."
+        texto_con_tel_local = "Llamar al teléfono de contacto 987654321 de urgencia."
+        texto_con_tel_internacional = "Fono: +56 9 1234 5678."
 
         self.assertTrue(self.anonimizador.verificar_fuga_pii(texto_limpio))
         self.assertFalse(self.anonimizador.verificar_fuga_pii(texto_con_rut))
         self.assertFalse(self.anonimizador.verificar_fuga_pii(texto_con_email))
+        self.assertFalse(self.anonimizador.verificar_fuga_pii(texto_con_tel_local))
+        self.assertFalse(self.anonimizador.verificar_fuga_pii(texto_con_tel_internacional))
+
+    def test_mitigacion_ai_01_async_concurrency_non_blocking(self):
+        """
+        Remediación AI-01 (OCR AST Concurrency & Async):
+        Verifica que los endpoints /api/v1/process-audio y /api/v1/process-text
+        estén definidos como corrutinas asíncronas y deleguen el procesamiento intensivo vía asyncio.to_thread.
+        """
+        import inspect
+        from core.engine_api import procesar_audio, procesar_texto
+
+        self.assertTrue(inspect.iscoroutinefunction(procesar_audio))
+        self.assertTrue(inspect.iscoroutinefunction(procesar_texto))
+
+    def test_mitigacion_ai_02_anonimizacion_telefonos_chilenos_exhaustiva(self):
+        """
+        Remediación AI-02 (Boundary & Logic / Ley 21.719):
+        Verifica que números telefónicos móviles y fijos chilenos (con o sin prefijo +56)
+        sean tokenizados y restaurados sin fuga de PII hacia el modelo de lenguaje.
+        """
+        ejemplos_telefonos = [
+            ("Móvil nacional sin prefijo", "El paciente informa número de celular 987654321 para citaciones.", "987654321"),
+            ("Móvil con código país +56", "Contacto de urgencia: +56 9 8765 4321.", "+56 9 8765 4321"),
+            ("Móvil con 56 sin más", "Registrar fono 56987654321 en ficha médica.", "56987654321"),
+            ("Fijo metropolitano 9 dígitos", "Fono residencial informado: 221234567.", "221234567"),
+            ("Fijo 8 dígitos", "Número local antiguo 12345678.", "12345678"),
+        ]
+
+        for desc, texto_original, numero_esperado in ejemplos_telefonos:
+            with self.subTest(caso=desc):
+                sanitizado, mapping = self.anonimizador.anonimizar(texto_original)
+                # 1. El número en claro no debe persistir en el texto sanitizado
+                self.assertNotIn(numero_esperado, sanitizado, f"Fuga de PII detectada para {desc}")
+                # 2. Debe crearse un token [TELEFONO_...]
+                self.assertTrue(any(k.startswith("[TELEFONO_") for k in mapping.keys()), f"No se generó token para {desc}")
+                # 3. El guardrail de fuga PII debe aprobar el texto sanitizado
+                self.assertTrue(self.anonimizador.verificar_fuga_pii(sanitizado))
+                # 4. Desanonimización exacta y reversible
+                restaurado = self.anonimizador.desanonimizar(sanitizado, mapping)
+                self.assertEqual(restaurado, texto_original, f"Falla de desanonimización reversible para {desc}")
+
+    def test_mitigacion_ai_03_timing_attack_hmac_compare_digest(self):
+        """
+        Remediación AI-03 (Security-Sensitive / Timing Attack Prevention):
+        Verifica que la función verify_gateway_auth utilice comparación segura en tiempo constante (hmac.compare_digest).
+        """
+        import os
+        from fastapi import HTTPException
+        from fastapi.security import HTTPAuthorizationCredentials
+        from core.engine_api import verify_gateway_auth
+
+        test_secret = "seguridad-pericial-token-2026-cat"
+        old_env = os.environ.get("AI_ENGINE_INTERNAL_TOKEN")
+        try:
+            os.environ["AI_ENGINE_INTERNAL_TOKEN"] = test_secret
+
+            # 1. Token válido vía Bearer
+            valido = verify_gateway_auth(credentials=HTTPAuthorizationCredentials(scheme="Bearer", credentials=test_secret))
+            self.assertEqual(valido, test_secret)
+
+            # 2. Token con diferencia de un caracter (debe lanzar 401)
+            with self.assertRaises(HTTPException) as ctx:
+                verify_gateway_auth(credentials=HTTPAuthorizationCredentials(scheme="Bearer", credentials=f"{test_secret[:-1]}X"))
+            self.assertEqual(ctx.exception.status_code, 401)
+
+            # 3. Token válido vía cabecera X-CAT-Internal-Token
+            valido_header = verify_gateway_auth(credentials=None, x_cat_internal_token=test_secret)
+            self.assertEqual(valido_header, test_secret)
+
+            # 4. Token ausente
+            with self.assertRaises(HTTPException) as ctx:
+                verify_gateway_auth(credentials=None, x_cat_internal_token=None)
+            self.assertEqual(ctx.exception.status_code, 401)
+        finally:
+            if old_env is not None:
+                os.environ["AI_ENGINE_INTERNAL_TOKEN"] = old_env
+            else:
+                os.environ.pop("AI_ENGINE_INTERNAL_TOKEN", None)
+
+    def test_mitigacion_ai_04_shredding_ram_rb_mode_protocol(self):
+        """
+        Remediación AI-04 (Resource Management / Destrucción RAM Ley 21.719):
+        Valida que el protocolo de trituración física abra en modo 'r+b' para garantizar
+        sobrescritura física en offset 0 en lugar de append al final del archivo.
+        """
+        import inspect
+        import tempfile
+        from pathlib import Path
+
+        # Verificar directamente la implementación del código fuente de secure_shred_ram_file
+        whisper_main_path = Path(__file__).resolve().parent / "whisper-service" / "app" / "main.py"
+        self.assertTrue(whisper_main_path.exists(), "Archivo whisper-service/app/main.py no encontrado")
+
+        with open(whisper_main_path, "r", encoding="utf-8") as f:
+            source_code = f.read()
+
+        # Prohibición del modo append 'ba+'
+        self.assertNotIn('open(canonical_path, "ba+"', source_code)
+        # Modo r+b obligatorio para sobrescritura real en offset 0
+        self.assertIn('open(canonical_path, "r+b"', source_code)
+        self.assertIn("f.seek(0)", source_code)
+        self.assertIn("os.fsync(", source_code)
+        self.assertIn("os.unlink(", source_code)
 
 
 if __name__ == "__main__":

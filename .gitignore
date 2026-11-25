@@ -44,3 +44,21 @@ protocolo_craving_clinico.txt
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Respaldos y Backups locales (Regla Global Antigravity)
+backups/
+backup/
+respaldos/
+backup_*/
+*_backup*
+*.bak*
+
+# Auditorías y Vulnerabilidades (Exclusión estricta de GitHub)
+*informe*
+*reporte*
+*finding*
+*hallazgo*
+*vulnerab*
+*evidencia*
+*poc*
+output/

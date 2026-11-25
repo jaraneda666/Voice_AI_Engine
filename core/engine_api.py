@@ -4,6 +4,8 @@ Project: Voice_AI_Engine (Private Clinical Speech & Medical NLP Subsystem)
 Security: OWASP Top 10 API Security | OWASP Web Application Security | Ley N° 21.719 | OWASP LLM 2025
 """
 
+import asyncio
+import hmac
 import logging
 import os
 from typing import Any, Dict, Optional
@@ -66,7 +68,7 @@ def verify_gateway_auth(
     elif x_cat_internal_token:
         token = x_cat_internal_token
 
-    expected_token = os.getenv("AI_ENGINE_INTERNAL_TOKEN", "").strip()
+    expected_token = os.getenv("AI_ENGINE_INTERNAL_TOKEN", "").strip() or os.getenv("AUTH_TOKEN_SECRET", "").strip()
     environment = os.getenv("ENVIRONMENT", "development").lower().strip()
 
     if environment == "production" or expected_token:
@@ -76,7 +78,7 @@ def verify_gateway_auth(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error de configuración interna de seguridad del gateway",
             )
-        if not token or token != expected_token:
+        if not token or not hmac.compare_digest(token.strip(), expected_token):
             logger.warning("Intento de acceso no autorizado al Gateway de IA: token inválido o ausente.")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -246,7 +248,8 @@ async def procesar_audio(
         context["paciente_rut"] = paciente_rut
 
     try:
-        resultado = pipeline.procesar_audio(
+        resultado = await asyncio.to_thread(
+            pipeline.procesar_audio,
             audio_bytes=audio_bytes,
             filename=filename,
             anonimizar=anonimizar,
@@ -270,7 +273,7 @@ async def procesar_audio(
 
 
 @app.post("/api/v1/process-text", response_model=PipelineResponse, tags=["Pipeline IA"])
-def procesar_texto(
+async def procesar_texto(
     input_data: TextoInput,
     _auth: str = Depends(verify_gateway_auth),
 ):
@@ -286,7 +289,8 @@ def procesar_texto(
         context["paciente_rut"] = input_data.paciente_rut
 
     try:
-        resultado = pipeline.procesar_texto(
+        resultado = await asyncio.to_thread(
+            pipeline.procesar_texto,
             texto_relato=input_data.texto,
             anonimizar=input_data.anonimizar,
             usar_rag=input_data.usar_rag,

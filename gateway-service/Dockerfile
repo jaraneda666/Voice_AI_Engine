@@ -1,7 +1,7 @@
 # ==============================================================================
 # AI API Gateway Microservice - Multi-stage Dockerfile
 # Hardened according to CIS Docker Benchmark v1.6.0
-# Target: Python 3.11 + FastAPI Internal Orchestrator
+# Target: Python 3.12 + FastAPI Internal Orchestrator
 # Portability: Dual index fallback for environments with DNS/CDN sinkholes
 # ==============================================================================
 

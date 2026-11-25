@@ -2,7 +2,7 @@
 # ==============================================================================
 # Whisper Transcription Microservice - Multi-stage Dockerfile
 # Hardened according to CIS Docker Benchmark
-# Target: Python 3.11 + faster-whisper (CTranslate2)
+# Target: Python 3.12 + faster-whisper (CTranslate2)
 # ==============================================================================
 
 # ------------------------------------------------------------------------------

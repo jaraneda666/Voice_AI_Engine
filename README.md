@@ -4,7 +4,7 @@
 *Private & Autonomous Clinical Speech & Medical NLP Subsystem*  
 
 [![Docker](https://img.shields.io/badge/Docker-Compose_v2-2496ED?logo=docker&logoColor=white)](#)
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](#)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](#)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](#)
 [![Faster-Whisper](https://img.shields.io/badge/Whisper-large--v3--turbo-orange)](#)
 [![Ollama](https://img.shields.io/badge/Ollama-Llama_3.1_8B-black?logo=ollama&logoColor=white)](#)

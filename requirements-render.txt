@@ -1,13 +1,15 @@
 # ==============================================================================
 # Voice AI Engine - Consolidated Requirements for Render & CPU Environments
 # Pinned compatible versions across Gateway, Whisper, RAG, and Testing modules
-# Target: Python 3.10 / 3.11 / 3.12 (Strict CPU runtime)
+# Target: Python 3.12 (Strict CPU runtime)
 # ==============================================================================
 
 # Core Web & API Framework
-fastapi>=0.110.0,<0.116.0
-uvicorn[standard]>=0.28.0,<0.33.0
-python-multipart>=0.0.9,<0.0.20
+fastapi>=0.115.0,<0.116.0
+uvicorn[standard]>=0.34.0,<0.35.0
+python-multipart>=0.0.20,<0.1.0
+pydantic>=2.10.0,<2.11.0
+pydantic-settings>=2.7.0,<2.8.0
 pydantic>=2.6.0,<2.11.0
 pydantic-settings>=2.2.0,<2.8.0
 

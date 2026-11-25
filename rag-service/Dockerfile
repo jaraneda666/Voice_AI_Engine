@@ -1,7 +1,7 @@
 # ==============================================================================
 # RAG Context & Document Ingestion Microservice - Multi-stage Dockerfile
 # Hardened according to CIS Docker Benchmark v1.6.0
-# Target: Python 3.11 + FastAPI + pypdf + python-docx
+# Target: Python 3.12 + FastAPI + pypdf + python-docx
 # Portability: Dual index fallback for environments with DNS/CDN sinkholes
 # ==============================================================================
 
